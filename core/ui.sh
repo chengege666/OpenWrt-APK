@@ -9,7 +9,7 @@ show_main_menu() {
     echo "1.   安装插件"
     echo "2.   卸载插件"
     echo "3.   更新插件"
-    echo "4.   自定义脚本"
+    echo "4.   一键配置启动快捷键"
     echo "00.  卸载脚本"
     echo "000. 更新脚本"
     echo "0.   退出"
@@ -31,16 +31,15 @@ show_install_plugin_menu() {
     echo ""
 }
 
-show_custom_menu() {
-    echo "================================"
-    echo " 自定义脚本"
-    echo "================================"
-    echo ""
-    echo "1. 设置快捷键"
-    echo "2. 查看已设置"
-    echo "3. 删除快捷键"
-    echo "0. 返回上级"
-    echo ""
+show_shortcut_list() {
+    if [ ! -f "${CUSTOM_CONFIG}" ] || [ ! -s "${CUSTOM_CONFIG}" ]; then
+        echo "[提示] 暂无已设置的快捷键"
+    else
+        echo "当前快捷键:"
+        while IFS='=' read -r key cmd; do
+            echo "  ${key} -> ${cmd}"
+        done < "$CUSTOM_CONFIG"
+    fi
 }
 
 show_uninstall_menu() {

@@ -39,7 +39,7 @@ main_menu() {
                 update_menu
                 ;;
             4)
-                custom_menu
+                shortcut_config
                 ;;
             00)
                 uninstall_store
@@ -318,56 +318,56 @@ update_store() {
 
 CUSTOM_CONFIG="${SCRIPT_DIR}/.custom_shortcuts"
 
-custom_menu() {
-    while true; do
-        show_custom_menu
-        printf "请选择: "
-        read_input
-
-        case "$choice" in
-            1)
-                set_shortcut
-                ;;
-            2)
-                list_shortcuts
-                ;;
-            3)
-                delete_shortcut
-                ;;
-            0)
-                return
-                ;;
-            *)
-                echo "[错误] 无效输入，请重新选择"
-                sleep 1
-                ;;
-        esac
-    done
-}
-
-set_shortcut() {
+shortcut_config() {
     echo ""
     echo "================================"
-    echo " 设置快捷键"
+    echo " 一键配置启动快捷键"
     echo "================================"
     echo ""
-    printf "输入快捷键 (单个字母或数字): "
+
+    show_shortcut_list
+    echo ""
+
+    printf "输入快捷键 (单个字母或数字，回车取消): "
     read -r key < "$TTY" 2>/dev/null || read -r key
     key=$(echo "$key" | tr -d '\r\n ')
 
-    if [ -z "$key" ] || [ ${#key} -gt 1 ]; then
+    if [ -z "$key" ]; then
+        echo "[取消] 已取消"
+        sleep 1
+        return
+    fi
+
+    if [ ${#key} -gt 1 ]; then
         echo "[错误] 快捷键必须为单个字符"
         sleep 2
         return
     fi
 
     case "$key" in
-        0|8|9)
+        1|2|3|4|0)
             echo "[错误] 该快捷键已被系统占用"
             sleep 2
             return
             ;;
     esac
+
+    local existing_cmd
+    existing_cmd=$(grep "^${key}=" "$CUSTOM_CONFIG" 2>/dev/null | head -1 | cut -d'=' -f2-)
+    if [ -n "$existing_cmd" ]; then
+        echo "[提示] 快捷键 ${key} 已存在: ${existing_cmd}"
+        printf "覆盖? (y/n): "
+        read -r confirm < "$TTY" 2>/dev/null || read -r confirm
+        case "$confirm" in
+            y|Y|yes|YES)
+                ;;
+            *)
+                echo "[取消]"
+                sleep 1
+                return
+                ;;
+        esac
+    fi
 
     printf "输入要执行的命令: "
     read -r cmd < "$TTY" 2>/dev/null || read -r cmd
@@ -379,70 +379,10 @@ set_shortcut() {
         return
     fi
 
-    if [ -f "$CUSTOM_CONFIG" ]; then
-        sed -i "/^${key}=/d" "$CUSTOM_CONFIG" 2>/dev/null
-    fi
+    sed -i "/^${key}=/d" "$CUSTOM_CONFIG" 2>/dev/null
     echo "${key}=${cmd}" >> "$CUSTOM_CONFIG"
 
     echo "[成功] 快捷键 ${key} 已设置"
-    sleep 2
-}
-
-list_shortcuts() {
-    echo ""
-    echo "================================"
-    echo " 已设置的快捷键"
-    echo "================================"
-    echo ""
-
-    if [ ! -f "$CUSTOM_CONFIG" ] || [ ! -s "$CUSTOM_CONFIG" ]; then
-        echo "[提示] 暂无已设置的快捷键"
-    else
-        while IFS='=' read -r key cmd; do
-            echo "  ${key} -> ${cmd}"
-        done < "$CUSTOM_CONFIG"
-    fi
-
-    echo ""
-    printf "按回车键继续..."
-    read -r dummy
-}
-
-delete_shortcut() {
-    echo ""
-    echo "================================"
-    echo " 删除快捷键"
-    echo "================================"
-    echo ""
-
-    if [ ! -f "$CUSTOM_CONFIG" ] || [ ! -s "$CUSTOM_CONFIG" ]; then
-        echo "[提示] 暂无已设置的快捷键"
-        sleep 2
-        return
-    fi
-
-    echo "当前快捷键："
-    while IFS='=' read -r key cmd; do
-        echo "  ${key} -> ${cmd}"
-    done < "$CUSTOM_CONFIG"
-    echo ""
-
-    printf "输入要删除的快捷键: "
-    read -r key < "$TTY" 2>/dev/null || read -r key
-    key=$(echo "$key" | tr -d '\r\n ')
-
-    if [ -z "$key" ]; then
-        echo "[取消] 未输入"
-        sleep 1
-        return
-    fi
-
-    if grep -q "^${key}=" "$CUSTOM_CONFIG" 2>/dev/null; then
-        sed -i "/^${key}=/d" "$CUSTOM_CONFIG" 2>/dev/null
-        echo "[成功] 快捷键 ${key} 已删除"
-    else
-        echo "[错误] 未找到快捷键 ${key}"
-    fi
     sleep 2
 }
 
