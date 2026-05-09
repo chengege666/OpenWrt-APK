@@ -15,10 +15,22 @@ show_main_menu() {
     echo "7.   Tailscale"
     echo "8.   卸载插件"
     echo "9.   更新插件"
-    echo "k.   自定义命令"
+    echo "10.  自定义脚本"
     echo "00.  卸载脚本"
     echo "000. 更新脚本"
     echo "0.   退出"
+    echo ""
+}
+
+show_custom_menu() {
+    echo "================================"
+    echo " 自定义脚本"
+    echo "================================"
+    echo ""
+    echo "1. 设置快捷键"
+    echo "2. 查看已设置"
+    echo "3. 删除快捷键"
+    echo "0. 返回上级"
     echo ""
 }
 
