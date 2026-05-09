@@ -51,6 +51,16 @@ chmod +x "${INSTALL_DIR}/store.sh"
 echo ""
 echo "[成功] 下载完成"
 echo ""
+
+echo "[配置] 创建快捷启动命令..."
+cat > /usr/bin/apk-store << 'EOF'
+#!/bin/sh
+sh /root/apk-store/store.sh
+EOF
+chmod +x /usr/bin/apk-store
+
+echo "[成功] 快捷命令已创建: apk-store"
+echo ""
 echo "[启动] OpenWrt APK Store..."
 echo ""
 sh "${INSTALL_DIR}/store.sh"

@@ -211,6 +211,7 @@ uninstall_store() {
     echo "将删除以下内容："
     echo "  - 脚本目录: ${SCRIPT_DIR}"
     echo "  - 缓存目录: ${CACHE_DIR}"
+    echo "  - 快捷命令: /usr/bin/apk-store"
     echo ""
     printf "确认卸载？(y/n): "
     read_input
@@ -218,6 +219,7 @@ uninstall_store() {
         y|Y|yes|YES)
             rm -rf "${SCRIPT_DIR}"
             rm -rf "${CACHE_DIR}"
+            rm -f /usr/bin/apk-store
             echo "[成功] 脚本已卸载"
             exit 0
             ;;
