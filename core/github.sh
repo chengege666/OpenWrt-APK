@@ -29,7 +29,7 @@ get_release_tag() {
     if command -v jq >/dev/null 2>&1; then
         echo "$json" | jq -r '.tag_name' 2>/dev/null
     else
-        echo "$json" | grep -o '"tag_name":"[^"]*"' | head -1 | cut -d'"' -f4
+        echo "$json" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1
     fi
 }
 
@@ -39,7 +39,7 @@ get_download_urls() {
     if command -v jq >/dev/null 2>&1; then
         echo "$json" | jq -r '.assets[].browser_download_url' 2>/dev/null
     else
-        echo "$json" | grep -o '"browser_download_url":"[^"]*"' | cut -d'"' -f4
+        echo "$json" | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p'
     fi
 }
 
