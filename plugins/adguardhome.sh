@@ -1,10 +1,6 @@
 #!/bin/sh
 # plugins/adguardhome.sh - AdGuardHome 插件模块
 
-GITHUB_OWNER="kenzok8"
-GITHUB_REPO="luci-app-adguardhome"
-PLUGIN_NAME="adguardhome"
-
 install_adguardhome() {
     echo ""
     echo "================================"
@@ -16,8 +12,12 @@ install_adguardhome() {
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
 
+    local owner="kenzok8"
+    local repo="luci-app-adguardhome"
+    local plugin_name="adguardhome"
+
     local release_json
-    release_json=$(get_latest_release "$GITHUB_OWNER" "$GITHUB_REPO") || return 1
+    release_json=$(get_latest_release "$owner" "$repo") || return 1
 
     local tag
     tag=$(get_release_tag "$release_json")
@@ -27,7 +27,7 @@ install_adguardhome() {
     all_urls=$(get_download_urls "$release_json")
 
     local luci_urls
-    luci_urls=$(filter_luci_apk "$all_urls" "$PLUGIN_NAME")
+    luci_urls=$(filter_luci_apk "$all_urls" "$plugin_name")
 
     local i18n_urls
     i18n_urls=$(filter_i18n_apk "$all_urls")
@@ -44,10 +44,10 @@ install_adguardhome() {
     fi
 
     echo "[下载] 正在下载 APK 文件..."
-    download_apks "$all_apk_urls" "$PLUGIN_NAME" || return 1
+    download_apks "$all_apk_urls" "$plugin_name" || return 1
 
     echo "[安装] 正在安装..."
-    install_apks "$PLUGIN_NAME" || return 1
+    install_apks "$plugin_name" || return 1
 
     echo "[修复] 修复依赖..."
     fix_dependencies

@@ -1,10 +1,6 @@
 #!/bin/sh
 # plugins/passwall.sh - PassWall 插件模块
 
-GITHUB_OWNER="xiaorouji"
-GITHUB_REPO="openwrt-passwall"
-PLUGIN_NAME="passwall"
-
 install_passwall() {
     echo ""
     echo "================================"
@@ -16,8 +12,12 @@ install_passwall() {
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
 
+    local owner="xiaorouji"
+    local repo="openwrt-passwall"
+    local plugin_name="passwall"
+
     local release_json
-    release_json=$(get_latest_release "$GITHUB_OWNER" "$GITHUB_REPO") || return 1
+    release_json=$(get_latest_release "$owner" "$repo") || return 1
 
     local tag
     tag=$(get_release_tag "$release_json")
@@ -27,7 +27,7 @@ install_passwall() {
     all_urls=$(get_download_urls "$release_json")
 
     local luci_urls
-    luci_urls=$(filter_luci_apk "$all_urls" "$PLUGIN_NAME")
+    luci_urls=$(filter_luci_apk "$all_urls" "$plugin_name")
 
     local i18n_urls
     i18n_urls=$(filter_i18n_apk "$all_urls")
@@ -44,10 +44,10 @@ install_passwall() {
     fi
 
     echo "[下载] 正在下载 APK 文件..."
-    download_apks "$all_apk_urls" "$PLUGIN_NAME" || return 1
+    download_apks "$all_apk_urls" "$plugin_name" || return 1
 
     echo "[安装] 正在安装..."
-    install_apks "$PLUGIN_NAME" || return 1
+    install_apks "$plugin_name" || return 1
 
     echo "[修复] 修复依赖..."
     fix_dependencies

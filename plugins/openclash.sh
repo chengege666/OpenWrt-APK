@@ -1,10 +1,6 @@
 #!/bin/sh
 # plugins/openclash.sh - OpenClash 插件模块
 
-GITHUB_OWNER="vernesong"
-GITHUB_REPO="OpenClash"
-PLUGIN_NAME="openclash"
-
 install_openclash() {
     echo ""
     echo "================================"
@@ -16,18 +12,22 @@ install_openclash() {
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
 
+    local owner="vernesong"
+    local repo="OpenClash"
+    local plugin_name="openclash"
+
     local release_json
-    release_json=$(get_latest_release "$GITHUB_OWNER" "$GITHUB_REPO") || return 1
+    release_json=$(get_latest_release "$owner" "$repo") || return 1
 
     local tag
     tag=$(get_release_tag "$release_json")
     echo "[版本] $tag"
 
     local apk_url
-    apk_url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/luci-app-openclash-${tag#v}.apk"
+    apk_url="https://github.com/${owner}/${repo}/releases/download/${tag}/luci-app-openclash-${tag#v}.apk"
     echo "[下载] $apk_url"
 
-    local download_dir="${CACHE_DIR}/${PLUGIN_NAME}"
+    local download_dir="${CACHE_DIR}/${plugin_name}"
     mkdir -p "$download_dir"
 
     local output="${download_dir}/luci-app-openclash.apk"
