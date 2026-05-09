@@ -15,6 +15,8 @@ show_main_menu() {
     echo "7. Tailscale"
     echo "8. 卸载插件"
     echo "9. 更新插件"
+    echo "00. 卸载脚本"
+    echo "000. 更新脚本"
     echo "0. 退出"
     echo ""
 }
