@@ -57,6 +57,15 @@ install_openclash() {
     echo "[修复] 修复依赖..."
     fix_dependencies
 
+    echo "[启用] 启用 OpenClash 服务..."
+    if [ -f /etc/init.d/openclash ]; then
+        /etc/init.d/openclash enable 2>/dev/null
+        /etc/init.d/openclash start 2>/dev/null
+    fi
+
+    echo "[清理] 清除 LuCI 缓存..."
+    rm -rf /tmp/luci-* 2>/dev/null
+
     echo "[重启] 重启 LuCI..."
     restart_luci
 
