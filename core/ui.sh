@@ -27,6 +27,7 @@ show_install_plugin_menu() {
     echo "4.   AdGuardHome"
     echo "5.   Docker"
     echo "6.   Aurora 主题"
+    echo "7.   Lucky"
     echo "0.   返回上级"
     echo ""
 }
@@ -77,7 +78,8 @@ show_update_menu() {
     echo "4. 更新 AdGuardHome"
     echo "5. 更新 Docker"
 echo "6. 更新 Aurora 主题"
-echo "7. 更新全部"
+echo "7. 更新 Lucky"
+echo "8. 更新全部"
 echo "0. 返回上级"
     echo ""
 }
