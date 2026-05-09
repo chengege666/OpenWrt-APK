@@ -23,6 +23,33 @@ get_latest_release() {
     echo "$response"
 }
 
+get_latest_commit_sha() {
+    local owner="$1"
+    local repo="$2"
+    local branch="${3:-main}"
+
+    if [ -z "$owner" ] || [ -z "$repo" ]; then
+        echo "[错误] 仓库信息不完整"
+        return 1
+    fi
+
+    local api_url="https://api.github.com/repos/${owner}/${repo}/commits/${branch}"
+    local response
+
+    response=$(wget -q --timeout=15 -O- "$api_url" 2>/dev/null)
+
+    if [ -z "$response" ]; then
+        echo "[错误] 无法获取最新提交: $owner/$repo"
+        return 1
+    fi
+
+    if command -v jq >/dev/null 2>&1; then
+        echo "$response" | jq -r '.sha' 2>/dev/null
+    else
+        echo "$response" | sed -n 's/ *"sha": *"\([a-f0-9]\{40\}\)".*/\1/p' | head -1
+    fi
+}
+
 get_release_tag() {
     local json="$1"
 

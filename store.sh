@@ -218,9 +218,20 @@ update_store() {
     rm -rf "$tmp_dir"
     mkdir -p "$tmp_dir/core" "$tmp_dir/plugins"
 
+    local commit_sha
+    commit_sha=$(get_latest_commit_sha "chengege666" "OpenWrt-APK" "main")
+
+    local ref="main"
+    if [ -n "$commit_sha" ] && [ ${#commit_sha} -eq 40 ]; then
+        ref="$commit_sha"
+        echo "[SHA] $commit_sha"
+    else
+        echo "[提示] 获取最新提交失败，使用 main 分支"
+    fi
+
     echo "[下载] 正在获取最新版本..."
 
-    local raw_url="https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main"
+    local raw_url="https://raw.githubusercontent.com/chengege666/OpenWrt-APK/${ref}"
     local fail=0
 
     wget -q --timeout=30 -O "${tmp_dir}/store.sh" "${raw_url}/store.sh" 2>/dev/null || fail=1
