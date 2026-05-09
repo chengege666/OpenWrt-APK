@@ -21,6 +21,7 @@ main_menu() {
         show_main_menu
         printf "请选择: "
         read -r choice
+        choice=$(echo "$choice" | tr -d '\r\n ')
 
         case "$choice" in
             1)
@@ -74,6 +75,7 @@ uninstall_menu() {
         show_uninstall_menu
         printf "请选择: "
         read -r choice
+        choice=$(echo "$choice" | tr -d '\r\n ')
 
         case "$choice" in
             1)
@@ -120,6 +122,7 @@ update_menu() {
         show_update_menu
         printf "请选择: "
         read -r choice
+        choice=$(echo "$choice" | tr -d '\r\n ')
 
         case "$choice" in
             1)
