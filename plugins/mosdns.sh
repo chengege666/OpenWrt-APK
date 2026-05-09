@@ -12,6 +12,17 @@ install_mosdns() {
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
 
+    local openwrt_ver="24.10"
+    if [ -f /etc/openwrt_release ]; then
+        . /etc/openwrt_release 2>/dev/null
+        case "$DISTRIB_RELEASE" in
+            25*|snapshot*)
+                openwrt_ver="25.12"
+                ;;
+        esac
+    fi
+    echo "[系统] OpenWrt $openwrt_ver"
+
     local owner="sbwml"
     local repo="luci-app-mosdns"
     local plugin_name="mosdns"
@@ -26,28 +37,64 @@ install_mosdns() {
     local all_urls
     all_urls=$(get_download_urls "$release_json")
 
-    local luci_urls
-    luci_urls=$(filter_luci_apk "$all_urls" "$plugin_name")
+    local tarball_url
+    tarball_url=$(echo "$all_urls" | grep "openwrt-${openwrt_ver}\.tar\.gz$" | grep -i "${arch}" | head -1)
 
-    local i18n_urls
-    i18n_urls=$(filter_i18n_apk "$all_urls")
+    if [ -z "$tarball_url" ]; then
+        echo "[重试] 未找到 ${arch} 匹配包，尝试模糊匹配..."
+        tarball_url=$(echo "$all_urls" | grep "openwrt-${openwrt_ver}\.tar\.gz$" | grep -i "$(uname -m)" | head -1)
+    fi
 
-    local arch_urls
-    arch_urls=$(filter_apk_by_arch "$all_urls" "$arch")
+    if [ -z "$tarball_url" ]; then
+        tarball_url=$(echo "$all_urls" | grep "\.tar\.gz$" | grep -i "${arch}" | head -1)
+    fi
 
-    local all_apk_urls
-    all_apk_urls=$(printf "%s\n%s\n%s" "$luci_urls" "$i18n_urls" "$arch_urls" | sort -u | grep -v '^$')
-
-    if [ -z "$all_apk_urls" ]; then
-        echo "[错误] 未找到可用的 APK 文件"
+    if [ -z "$tarball_url" ]; then
+        echo "[错误] 未找到匹配架构 ${arch} 的下载包"
         return 1
     fi
 
-    echo "[下载] 正在下载 APK 文件..."
-    download_apks "$all_apk_urls" "$plugin_name" || return 1
+    local download_dir="${CACHE_DIR}/${plugin_name}"
+    rm -rf "$download_dir"
+    mkdir -p "$download_dir"
 
-    echo "[安装] 正在安装..."
-    install_apks "$plugin_name" || return 1
+    local tarball_name
+    tarball_name=$(basename "$tarball_url")
+
+    echo "[下载] $tarball_name"
+    if ! wget -q --timeout=60 -O "${download_dir}/${tarball_name}" "$tarball_url" 2>/dev/null; then
+        echo "[错误] 下载失败"
+        rm -f "${download_dir}/${tarball_name}"
+        return 1
+    fi
+
+    echo "[解压] 正在解压..."
+    if ! tar xzf "${download_dir}/${tarball_name}" -C "$download_dir" 2>/dev/null; then
+        echo "[错误] 解压失败"
+        rm -f "${download_dir}/${tarball_name}"
+        return 1
+    fi
+
+    rm -f "${download_dir}/${tarball_name}"
+
+    local apk_files
+    apk_files=$(find "$download_dir" -name "*.apk" 2>/dev/null)
+
+    if [ -z "$apk_files" ]; then
+        echo "[错误] 未找到 APK 文件"
+        return 1
+    fi
+
+    local apk_count
+    apk_count=$(echo "$apk_files" | wc -l)
+    echo "[安装] 正在安装 $apk_count 个 APK..."
+
+    if apk add --allow-untrusted --force-overwrite $apk_files 2>/dev/null; then
+        echo "[成功] APK 安装完成"
+    else
+        echo "[错误] APK 安装失败"
+        return 1
+    fi
 
     echo "[修复] 修复依赖..."
     fix_dependencies
