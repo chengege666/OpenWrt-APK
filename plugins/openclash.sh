@@ -1,6 +1,28 @@
 #!/bin/sh
 # plugins/openclash.sh - OpenClash 插件模块
 
+install_openclash_deps() {
+    echo "[依赖] 检查 OpenClash 运行依赖..."
+
+    local common_pkgs="bash dnsmasq-full curl ca-bundle ip-full ruby ruby-yaml kmod-tun kmod-inet-diag unzip luci-compat luci luci-base"
+
+    echo "[依赖] 安装基础依赖..."
+    apk add --allow-untrusted $common_pkgs 2>/dev/null
+
+    local firewall
+    firewall=$(uci get firewall.@defaults[0].fw4_forward 2>/dev/null && echo "nftables" || echo "iptables")
+
+    if [ "$firewall" = "nftables" ]; then
+        echo "[依赖] 检测到 nftables 防火墙，安装 nftables 模块..."
+        apk add --allow-untrusted kmod-nft-tproxy 2>/dev/null
+    else
+        echo "[依赖] 检测到 iptables 防火墙，安装 iptables 模块..."
+        apk add --allow-untrusted iptables ipset iptables-mod-tproxy iptables-mod-extra 2>/dev/null
+    fi
+
+    echo "[依赖] 依赖安装完成"
+}
+
 install_openclash() {
     echo ""
     echo "================================"
@@ -11,6 +33,8 @@ install_openclash() {
     local arch
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
+
+    install_openclash_deps
 
     local owner="vernesong"
     local repo="OpenClash"
@@ -47,7 +71,7 @@ install_openclash() {
 
     echo "[安装] 正在安装..."
     cd "$download_dir" || return 1
-    if apk add --allow-untrusted --force-overwrite *.apk 2>/dev/null; then
+    if apk add --allow-untrusted --force-overwrite --clean-protected *.apk 2>/dev/null; then
         echo "[成功] APK 安装完成"
     else
         echo "[错误] APK 安装失败"
