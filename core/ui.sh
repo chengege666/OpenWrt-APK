@@ -28,6 +28,7 @@ show_install_plugin_menu() {
     echo "5.   Docker"
     echo "6.   Aurora 主题"
     echo "7.   Lucky"
+    echo "8.   Argon 主题"
     echo "0.   返回上级"
     echo ""
 }
@@ -63,6 +64,8 @@ show_uninstall_menu() {
     echo "4. 卸载 AdGuardHome"
     echo "5. 卸载 Docker"
 echo "6. 卸载 Aurora 主题"
+echo "7. 卸载 Lucky"
+echo "8. 卸载 Argon 主题"
 echo "0. 返回上级"
     echo ""
 }

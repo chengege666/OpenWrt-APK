@@ -15,6 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/docker.sh"
 . "${SCRIPT_DIR}/plugins/luci-theme-aurora.sh"
 . "${SCRIPT_DIR}/plugins/lucky.sh"
+. "${SCRIPT_DIR}/plugins/luci-theme-argon.sh"
 
 TTY="/dev/tty"
 
@@ -143,6 +144,10 @@ uninstall_menu() {
                 uninstall_lucky
                 wait_for_enter
                 ;;
+            8)
+                uninstall_luci_theme_argon
+                wait_for_enter
+                ;;
             0)
                 return
                 ;;
@@ -190,6 +195,10 @@ update_menu() {
                 wait_for_enter
                 ;;
             8)
+                update_luci_theme_argon
+                wait_for_enter
+                ;;
+            9)
                 update_all
                 wait_for_enter
                 ;;
@@ -290,7 +299,7 @@ update_store() {
         wget -q --timeout=30 -O "${tmp_dir}/core/${f}" "${raw_url}/core/${f}" 2>/dev/null || true
     done
 
-    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh luci-theme-aurora.sh lucky.sh; do
+    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh luci-theme-aurora.sh lucky.sh luci-theme-argon.sh; do
         wget -q --timeout=30 -O "${tmp_dir}/plugins/${f}" "${raw_url}/plugins/${f}" 2>/dev/null || true
     done
 
@@ -311,7 +320,7 @@ update_store() {
         cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null || { echo "[错误] core/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 
-    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh luci-theme-aurora.sh lucky.sh; do
+    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh luci-theme-aurora.sh lucky.sh luci-theme-argon.sh; do
         cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null || { echo "[错误] plugins/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 
