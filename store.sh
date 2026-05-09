@@ -30,6 +30,45 @@ main_menu() {
 
         case "$choice" in
             1)
+                install_plugin_menu
+                ;;
+            2)
+                uninstall_menu
+                ;;
+            3)
+                update_menu
+                ;;
+            4)
+                custom_menu
+                ;;
+            00)
+                uninstall_store
+                ;;
+            000)
+                update_store
+                ;;
+            0)
+                echo "退出 OpenWrt APK Store"
+                exit 0
+                ;;
+            *)
+                if ! run_custom_shortcut "$choice"; then
+                    echo "[错误] 无效输入，请重新选择"
+                    sleep 1
+                fi
+                ;;
+        esac
+    done
+}
+
+install_plugin_menu() {
+    while true; do
+        show_install_plugin_menu
+        printf "请选择: "
+        read_input
+
+        case "$choice" in
+            1)
                 install_openclash
                 wait_for_enter
                 ;;
@@ -53,30 +92,12 @@ main_menu() {
                 install_luci_theme_aurora
                 wait_for_enter
                 ;;
-            7)
-                uninstall_menu
-                ;;
-            8)
-                update_menu
-                ;;
-            9)
-                custom_menu
-                ;;
-            00)
-                uninstall_store
-                ;;
-            000)
-                update_store
-                ;;
             0)
-                echo "退出 OpenWrt APK Store"
-                exit 0
+                return
                 ;;
             *)
-                if ! run_custom_shortcut "$choice"; then
-                    echo "[错误] 无效输入，请重新选择"
-                    sleep 1
-                fi
+                echo "[错误] 无效输入，请重新选择"
+                sleep 1
                 ;;
         esac
     done
