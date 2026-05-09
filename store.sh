@@ -241,72 +241,52 @@ update_store() {
     echo ""
 
     local tmp_dir="/tmp/apk-store-update"
-    mkdir -p "$tmp_dir"
+    rm -rf "$tmp_dir"
+    mkdir -p "$tmp_dir/core" "$tmp_dir/plugins"
 
     echo "[下载] 正在获取最新版本..."
 
-    if wget -q --timeout=30 -O "${tmp_dir}/store.sh" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/store.sh" 2>/dev/null; then
-        if [ -f "${tmp_dir}/store.sh" ] && [ -s "${tmp_dir}/store.sh" ]; then
-            echo "[下载] 核心文件完成"
-        else
-            echo "[错误] 下载文件为空"
-            rm -rf "$tmp_dir"
-            sleep 2
-            return
-        fi
-    else
-        echo "[错误] 下载失败"
+    local fail=0
+
+    wget -q --timeout=30 -O "${tmp_dir}/store.sh" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/store.sh" 2>/dev/null || fail=1
+    wget -q --timeout=30 -O "${tmp_dir}/install.sh" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/install.sh" 2>/dev/null || true
+
+    for f in network.sh github.sh install.sh ui.sh; do
+        wget -q --timeout=30 -O "${tmp_dir}/core/${f}" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/${f}" 2>/dev/null || true
+    done
+
+    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
+        wget -q --timeout=30 -O "${tmp_dir}/plugins/${f}" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/plugins/${f}" 2>/dev/null || true
+    done
+
+    if [ "$fail" -eq 1 ] || [ ! -s "${tmp_dir}/store.sh" ]; then
+        echo "[错误] 核心文件下载失败"
         rm -rf "$tmp_dir"
         sleep 2
         return
     fi
 
-    if wget -q --timeout=30 -O "${tmp_dir}/install.sh" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/install.sh" 2>/dev/null; then
-        echo "[下载] 安装器完成"
-    else
-        echo "[警告] 安装器下载失败，跳过"
-    fi
-
-    for core_file in network.sh github.sh install.sh ui.sh; do
-        if wget -q --timeout=30 -O "${tmp_dir}/${core_file}" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/${core_file}" 2>/dev/null; then
-            echo "[下载] core/${core_file} 完成"
-        else
-            echo "[警告] core/${core_file} 下载失败"
-        fi
-    done
-
-    for plugin_file in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
-        if wget -q --timeout=30 -O "${tmp_dir}/${plugin_file}" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/plugins/${plugin_file}" 2>/dev/null; then
-            echo "[下载] plugins/${plugin_file} 完成"
-        else
-            echo "[警告] plugins/${plugin_file} 下载失败"
-        fi
-    done
-
-    echo "[安装] 正在更新文件..."
+    echo "[安装] 正在替换文件..."
 
     cp -f "${tmp_dir}/store.sh" "${SCRIPT_DIR}/store.sh"
     cp -f "${tmp_dir}/install.sh" "${SCRIPT_DIR}/install.sh" 2>/dev/null
 
-    mkdir -p "${SCRIPT_DIR}/core"
-    for core_file in network.sh github.sh install.sh ui.sh; do
-        cp -f "${tmp_dir}/${core_file}" "${SCRIPT_DIR}/core/${core_file}" 2>/dev/null
+    for f in network.sh github.sh install.sh ui.sh; do
+        cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null
     done
 
-    mkdir -p "${SCRIPT_DIR}/plugins"
-    for plugin_file in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
-        cp -f "${tmp_dir}/${plugin_file}" "${SCRIPT_DIR}/plugins/${plugin_file}" 2>/dev/null
+    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
+        cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null
     done
 
     rm -rf "$tmp_dir"
 
     echo "[成功] 脚本更新完成"
     echo ""
-    echo "请重新运行脚本以使用最新版本"
+    echo "[重启] 正在启动新版本..."
     echo ""
-    printf "按回车键退出..."
-    read -r dummy
-    exit 0
+
+    exec sh "${SCRIPT_DIR}/store.sh"
 }
 
 custom_command() {
