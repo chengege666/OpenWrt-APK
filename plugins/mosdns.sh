@@ -26,9 +26,6 @@ install_mosdns() {
     local all_urls
     all_urls=$(get_download_urls "$release_json")
 
-    local main_urls
-    main_urls=$(filter_main_apk "$all_urls" "$PLUGIN_NAME")
-
     local luci_urls
     luci_urls=$(filter_luci_apk "$all_urls" "$PLUGIN_NAME")
 
@@ -39,7 +36,7 @@ install_mosdns() {
     arch_urls=$(filter_apk_by_arch "$all_urls" "$arch")
 
     local all_apk_urls
-    all_apk_urls=$(printf "%s\n%s\n%s\n%s" "$main_urls" "$luci_urls" "$i18n_urls" "$arch_urls" | sort -u | grep -v '^$')
+    all_apk_urls=$(printf "%s\n%s\n%s" "$luci_urls" "$i18n_urls" "$arch_urls" | sort -u | grep -v '^$')
 
     if [ -z "$all_apk_urls" ]; then
         echo "[错误] 未找到可用的 APK 文件"
