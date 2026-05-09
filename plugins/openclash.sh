@@ -26,6 +26,7 @@ install_openclash() {
     local all_urls
     all_urls=$(get_download_urls "$release_json")
     echo "[调试] 所有链接数量: $(echo "$all_urls" | wc -l)"
+    echo "[调试] 所有链接内容: $all_urls"
 
     local luci_urls
     luci_urls=$(filter_luci_apk "$all_urls" "$PLUGIN_NAME")
