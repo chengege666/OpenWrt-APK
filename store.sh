@@ -64,8 +64,8 @@ main_menu() {
             9)
                 update_menu
                 ;;
-            k|K)
-                custom_command
+            10)
+                custom_menu
                 ;;
             00)
                 uninstall_store
@@ -78,8 +78,10 @@ main_menu() {
                 exit 0
                 ;;
             *)
-                echo "[错误] 无效输入，请重新选择"
-                sleep 1
+                if ! run_custom_shortcut "$choice"; then
+                    echo "[错误] 无效输入，请重新选择"
+                    sleep 1
+                fi
                 ;;
         esac
     done
@@ -314,28 +316,164 @@ update_store() {
     exec sh "${SCRIPT_DIR}/store.sh"
 }
 
-custom_command() {
+CUSTOM_CONFIG="${SCRIPT_DIR}/.custom_shortcuts"
+
+custom_menu() {
+    while true; do
+        show_custom_menu
+        printf "请选择: "
+        read_input
+
+        case "$choice" in
+            1)
+                set_shortcut
+                ;;
+            2)
+                list_shortcuts
+                ;;
+            3)
+                delete_shortcut
+                ;;
+            0)
+                return
+                ;;
+            *)
+                echo "[错误] 无效输入，请重新选择"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+set_shortcut() {
     echo ""
     echo "================================"
-    echo " 自定义命令"
+    echo " 设置快捷键"
     echo "================================"
     echo ""
-    printf "输入命令: "
+    printf "输入快捷键 (单个字母或数字): "
+    read -r key < "$TTY" 2>/dev/null || read -r key
+    key=$(echo "$key" | tr -d '\r\n ')
+
+    if [ -z "$key" ] || [ ${#key} -gt 1 ]; then
+        echo "[错误] 快捷键必须为单个字符"
+        sleep 2
+        return
+    fi
+
+    case "$key" in
+        0|8|9)
+            echo "[错误] 该快捷键已被系统占用"
+            sleep 2
+            return
+            ;;
+    esac
+
+    printf "输入要执行的命令: "
     read -r cmd < "$TTY" 2>/dev/null || read -r cmd
     cmd=$(echo "$cmd" | tr -d '\r')
-    if [ -n "$cmd" ]; then
-        echo ""
-        echo "[执行] $cmd"
-        echo "--------------------------------"
-        eval "$cmd"
-        echo "--------------------------------"
-        echo "[完成] 命令执行完毕"
-    else
-        echo "[取消] 未输入命令"
+
+    if [ -z "$cmd" ]; then
+        echo "[错误] 命令不能为空"
+        sleep 2
+        return
     fi
+
+    if [ -f "$CUSTOM_CONFIG" ]; then
+        sed -i "/^${key}=/d" "$CUSTOM_CONFIG" 2>/dev/null
+    fi
+    echo "${key}=${cmd}" >> "$CUSTOM_CONFIG"
+
+    echo "[成功] 快捷键 ${key} 已设置"
+    sleep 2
+}
+
+list_shortcuts() {
+    echo ""
+    echo "================================"
+    echo " 已设置的快捷键"
+    echo "================================"
+    echo ""
+
+    if [ ! -f "$CUSTOM_CONFIG" ] || [ ! -s "$CUSTOM_CONFIG" ]; then
+        echo "[提示] 暂无已设置的快捷键"
+    else
+        while IFS='=' read -r key cmd; do
+            echo "  ${key} -> ${cmd}"
+        done < "$CUSTOM_CONFIG"
+    fi
+
     echo ""
     printf "按回车键继续..."
     read -r dummy
+}
+
+delete_shortcut() {
+    echo ""
+    echo "================================"
+    echo " 删除快捷键"
+    echo "================================"
+    echo ""
+
+    if [ ! -f "$CUSTOM_CONFIG" ] || [ ! -s "$CUSTOM_CONFIG" ]; then
+        echo "[提示] 暂无已设置的快捷键"
+        sleep 2
+        return
+    fi
+
+    echo "当前快捷键："
+    while IFS='=' read -r key cmd; do
+        echo "  ${key} -> ${cmd}"
+    done < "$CUSTOM_CONFIG"
+    echo ""
+
+    printf "输入要删除的快捷键: "
+    read -r key < "$TTY" 2>/dev/null || read -r key
+    key=$(echo "$key" | tr -d '\r\n ')
+
+    if [ -z "$key" ]; then
+        echo "[取消] 未输入"
+        sleep 1
+        return
+    fi
+
+    if grep -q "^${key}=" "$CUSTOM_CONFIG" 2>/dev/null; then
+        sed -i "/^${key}=/d" "$CUSTOM_CONFIG" 2>/dev/null
+        echo "[成功] 快捷键 ${key} 已删除"
+    else
+        echo "[错误] 未找到快捷键 ${key}"
+    fi
+    sleep 2
+}
+
+run_custom_shortcut() {
+    local key="$1"
+
+    if [ ! -f "$CUSTOM_CONFIG" ]; then
+        return 1
+    fi
+
+    local cmd
+    cmd=$(grep "^${key}=" "$CUSTOM_CONFIG" 2>/dev/null | head -1 | cut -d'=' -f2-)
+
+    if [ -n "$cmd" ]; then
+        echo ""
+        echo "================================"
+        echo " 执行自定义脚本 [${key}]"
+        echo "================================"
+        echo ""
+        echo "[执行] ${cmd}"
+        echo "--------------------------------"
+        eval "$cmd"
+        echo "--------------------------------"
+        echo "[完成] 执行完毕"
+        echo ""
+        printf "按回车键继续..."
+        read -r dummy
+        return 0
+    fi
+
+    return 1
 }
 
 init() {
