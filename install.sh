@@ -44,8 +44,6 @@ download_file "${RAW_URL}/plugins/passwall.sh" "${INSTALL_DIR}/plugins/passwall.
 download_file "${RAW_URL}/plugins/mosdns.sh" "${INSTALL_DIR}/plugins/mosdns.sh" && echo "[下载] plugins/mosdns.sh" || { echo "[错误] plugins/mosdns.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/adguardhome.sh" "${INSTALL_DIR}/plugins/adguardhome.sh" && echo "[下载] plugins/adguardhome.sh" || { echo "[错误] plugins/adguardhome.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/docker.sh" "${INSTALL_DIR}/plugins/docker.sh" && echo "[下载] plugins/docker.sh" || { echo "[错误] plugins/docker.sh 下载失败"; exit 1; }
-download_file "${RAW_URL}/plugins/ddns.sh" "${INSTALL_DIR}/plugins/ddns.sh" && echo "[下载] plugins/ddns.sh" || { echo "[错误] plugins/ddns.sh 下载失败"; exit 1; }
-download_file "${RAW_URL}/plugins/tailscale.sh" "${INSTALL_DIR}/plugins/tailscale.sh" && echo "[下载] plugins/tailscale.sh" || { echo "[错误] plugins/tailscale.sh 下载失败"; exit 1; }
 
 chmod +x "${INSTALL_DIR}/store.sh"
 
