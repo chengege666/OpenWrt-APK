@@ -16,12 +16,18 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/ddns.sh"
 . "${SCRIPT_DIR}/plugins/tailscale.sh"
 
+TTY="/dev/tty"
+
+read_input() {
+    read -r choice < "$TTY" 2>/dev/null || read -r choice
+    choice=$(echo "$choice" | tr -d '\r\n ')
+}
+
 main_menu() {
     while true; do
         show_main_menu
         printf "请选择: "
-        read -r choice
-        choice=$(echo "$choice" | tr -d '\r\n ')
+        read_input
 
         case "$choice" in
             1)
@@ -74,8 +80,7 @@ uninstall_menu() {
     while true; do
         show_uninstall_menu
         printf "请选择: "
-        read -r choice
-        choice=$(echo "$choice" | tr -d '\r\n ')
+        read_input
 
         case "$choice" in
             1)
@@ -121,8 +126,7 @@ update_menu() {
     while true; do
         show_update_menu
         printf "请选择: "
-        read -r choice
-        choice=$(echo "$choice" | tr -d '\r\n ')
+        read_input
 
         case "$choice" in
             1)
