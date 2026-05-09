@@ -25,18 +25,23 @@ install_openclash() {
 
     local all_urls
     all_urls=$(get_download_urls "$release_json")
+    echo "[调试] 所有链接数量: $(echo "$all_urls" | wc -l)"
 
     local luci_urls
     luci_urls=$(filter_luci_apk "$all_urls" "$PLUGIN_NAME")
+    echo "[调试] LuCI APK: $luci_urls"
 
     local i18n_urls
     i18n_urls=$(filter_i18n_apk "$all_urls")
+    echo "[调试] i18n APK: $i18n_urls"
 
     local arch_urls
     arch_urls=$(filter_apk_by_arch "$all_urls" "$arch")
+    echo "[调试] 架构 APK: $arch_urls"
 
     local all_apk_urls
     all_apk_urls=$(printf "%s\n%s\n%s" "$luci_urls" "$i18n_urls" "$arch_urls" | sort -u | grep -v '^$')
+    echo "[调试] 最终 APK: $all_apk_urls"
 
     if [ -z "$all_apk_urls" ]; then
         echo "[错误] 未找到可用的 APK 文件"
