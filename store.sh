@@ -98,6 +98,10 @@ install_plugin_menu() {
                 install_lucky
                 wait_for_enter
                 ;;
+            8)
+                install_luci_theme_argon
+                wait_for_enter
+                ;;
             0)
                 return
                 ;;
