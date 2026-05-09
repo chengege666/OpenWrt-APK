@@ -12,45 +12,35 @@ install_docker() {
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
 
-    local owner="openwrt"
-    local repo="docker"
-    local plugin_name="docker"
+    echo "[安装] Docker 为官方 APK 包，直接从软件源安装..."
 
-    local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || return 1
+    echo "[更新] 更新软件源索引..."
+    apk update 2>/dev/null
 
-    local tag
-    tag=$(get_release_tag "$release_json")
-    echo "[版本] $tag"
+    echo "[安装] 安装 Docker 核心..."
+    apk add --allow-untrusted docker dockerd 2>/dev/null
 
-    local all_urls
-    all_urls=$(get_download_urls "$release_json")
+    echo "[安装] 安装 LuCI 管理界面..."
+    apk add --allow-untrusted luci-app-dockerman luci-i18n-dockerman-zh-cn 2>/dev/null
 
-    local luci_urls
-    luci_urls=$(filter_luci_apk "$all_urls" "$plugin_name")
-
-    local i18n_urls
-    i18n_urls=$(filter_i18n_apk "$all_urls")
-
-    local arch_urls
-    arch_urls=$(filter_apk_by_arch "$all_urls" "$arch")
-
-    local all_apk_urls
-    all_apk_urls=$(printf "%s\n%s\n%s" "$luci_urls" "$i18n_urls" "$arch_urls" | sort -u | grep -v '^$')
-
-    if [ -z "$all_apk_urls" ]; then
-        echo "[错误] 未找到可用的 APK 文件"
-        return 1
+    echo "[配置] 配置 Docker..."
+    if [ ! -f /etc/config/dockerd ]; then
+        uci set dockerd.globals='globals' 2>/dev/null
+        uci set dockerd.globals.data_root='/opt/docker' 2>/dev/null
+        uci commit dockerd 2>/dev/null
     fi
 
-    echo "[下载] 正在下载 APK 文件..."
-    download_apks "$all_apk_urls" "$plugin_name" || return 1
-
-    echo "[安装] 正在安装..."
-    install_apks "$plugin_name" || return 1
+    echo "[启用] 启用 dockerd 服务..."
+    if [ -f /etc/init.d/dockerd ]; then
+        /etc/init.d/dockerd enable 2>/dev/null
+        /etc/init.d/dockerd start 2>/dev/null
+    fi
 
     echo "[修复] 修复依赖..."
     fix_dependencies
+
+    echo "[清理] 清除 LuCI 缓存..."
+    rm -rf /tmp/luci-* 2>/dev/null
 
     echo "[重启] 重启 LuCI..."
     restart_luci
@@ -64,6 +54,12 @@ uninstall_docker() {
     echo " 卸载 Docker"
     echo "================================"
     echo ""
+
+    echo "[停止] 停止 dockerd 服务..."
+    if [ -f /etc/init.d/dockerd ]; then
+        /etc/init.d/dockerd stop 2>/dev/null
+        /etc/init.d/dockerd disable 2>/dev/null
+    fi
 
     uninstall_plugin "luci-app-dockerman"
     uninstall_plugin "docker"
