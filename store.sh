@@ -64,6 +64,9 @@ main_menu() {
             9)
                 update_menu
                 ;;
+            k|K)
+                custom_command
+                ;;
             00)
                 uninstall_store
                 ;;
@@ -304,6 +307,29 @@ update_store() {
     printf "按回车键退出..."
     read -r dummy
     exit 0
+}
+
+custom_command() {
+    echo ""
+    echo "================================"
+    echo " 自定义命令"
+    echo "================================"
+    echo ""
+    printf "输入命令: "
+    read_input
+    if [ -n "$choice" ]; then
+        echo ""
+        echo "[执行] $choice"
+        echo "--------------------------------"
+        eval "$choice"
+        echo "--------------------------------"
+        echo "[完成] 命令执行完毕"
+    else
+        echo "[取消] 未输入命令"
+    fi
+    echo ""
+    printf "按回车键继续..."
+    read -r dummy
 }
 
 init() {
