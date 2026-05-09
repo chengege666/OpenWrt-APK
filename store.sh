@@ -265,11 +265,46 @@ update_store() {
         fi
     else
         echo "[检测] 未检测到 Git 仓库"
-        echo "[提示] 请通过以下方式更新："
-        echo "  1. 删除旧目录重新安装"
-        echo "  2. 或使用 git clone 安装"
-        sleep 3
-        return
+        echo "[更新] 正在下载最新版本..."
+
+        local tmp_dir="/tmp/apk-store-update"
+        rm -rf "$tmp_dir"
+        mkdir -p "$tmp_dir/core" "$tmp_dir/plugins"
+
+        local raw_url="https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main"
+        local fail=0
+
+        wget -q --timeout=30 -O "${tmp_dir}/store.sh" "${raw_url}/store.sh" 2>/dev/null || fail=1
+        wget -q --timeout=30 -O "${tmp_dir}/install.sh" "${raw_url}/install.sh" 2>/dev/null || true
+
+        for f in network.sh github.sh install.sh ui.sh; do
+            wget -q --timeout=30 -O "${tmp_dir}/core/${f}" "${raw_url}/core/${f}" 2>/dev/null || true
+        done
+
+        for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
+            wget -q --timeout=30 -O "${tmp_dir}/plugins/${f}" "${raw_url}/plugins/${f}" 2>/dev/null || true
+        done
+
+        if [ "$fail" -eq 1 ] || [ ! -s "${tmp_dir}/store.sh" ]; then
+            echo "[错误] 核心文件下载失败"
+            rm -rf "$tmp_dir"
+            sleep 2
+            return
+        fi
+
+        cp -f "${tmp_dir}/store.sh" "${SCRIPT_DIR}/store.sh"
+        cp -f "${tmp_dir}/install.sh" "${SCRIPT_DIR}/install.sh" 2>/dev/null
+
+        for f in network.sh github.sh install.sh ui.sh; do
+            cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null
+        done
+
+        for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
+            cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null
+        done
+
+        rm -rf "$tmp_dir"
+        echo "[成功] 文件更新完成"
     fi
 
     echo ""
