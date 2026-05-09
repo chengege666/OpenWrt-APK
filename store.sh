@@ -286,12 +286,13 @@ custom_command() {
     echo "================================"
     echo ""
     printf "输入命令: "
-    read_input
-    if [ -n "$choice" ]; then
+    read -r cmd < "$TTY" 2>/dev/null || read -r cmd
+    cmd=$(echo "$cmd" | tr -d '\r')
+    if [ -n "$cmd" ]; then
         echo ""
-        echo "[执行] $choice"
+        echo "[执行] $cmd"
         echo "--------------------------------"
-        eval "$choice"
+        eval "$cmd"
         echo "--------------------------------"
         echo "[完成] 命令执行完毕"
     else
