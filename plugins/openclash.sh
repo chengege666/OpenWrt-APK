@@ -23,37 +23,36 @@ install_openclash() {
     tag=$(get_release_tag "$release_json")
     echo "[版本] $tag"
 
-    local all_urls
-    all_urls=$(get_download_urls "$release_json")
-    echo "[调试] 所有链接数量: $(echo "$all_urls" | wc -l)"
-    echo "[调试] 所有链接内容: $all_urls"
+    local apk_url
+    apk_url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/luci-app-openclash-${tag#v}.apk"
+    echo "[下载] $apk_url"
 
-    local luci_urls
-    luci_urls=$(filter_luci_apk "$all_urls" "$PLUGIN_NAME")
-    echo "[调试] LuCI APK: $luci_urls"
+    local download_dir="${CACHE_DIR}/${PLUGIN_NAME}"
+    mkdir -p "$download_dir"
 
-    local i18n_urls
-    i18n_urls=$(filter_i18n_apk "$all_urls")
-    echo "[调试] i18n APK: $i18n_urls"
-
-    local arch_urls
-    arch_urls=$(filter_apk_by_arch "$all_urls" "$arch")
-    echo "[调试] 架构 APK: $arch_urls"
-
-    local all_apk_urls
-    all_apk_urls=$(printf "%s\n%s\n%s" "$luci_urls" "$i18n_urls" "$arch_urls" | sort -u | grep -v '^$')
-    echo "[调试] 最终 APK: $all_apk_urls"
-
-    if [ -z "$all_apk_urls" ]; then
-        echo "[错误] 未找到可用的 APK 文件"
+    local output="${download_dir}/luci-app-openclash.apk"
+    if wget -q --timeout=60 -O "$output" "$apk_url" 2>/dev/null; then
+        if [ -f "$output" ] && [ -s "$output" ]; then
+            echo "[成功] 下载完成"
+        else
+            echo "[错误] 下载文件为空"
+            rm -f "$output"
+            return 1
+        fi
+    else
+        echo "[错误] 下载失败"
+        rm -f "$output"
         return 1
     fi
 
-    echo "[下载] 正在下载 APK 文件..."
-    download_apks "$all_apk_urls" "$PLUGIN_NAME" || return 1
-
     echo "[安装] 正在安装..."
-    install_apks "$PLUGIN_NAME" || return 1
+    cd "$download_dir" || return 1
+    if apk add --allow-untrusted --force-overwrite *.apk 2>/dev/null; then
+        echo "[成功] APK 安装完成"
+    else
+        echo "[错误] APK 安装失败"
+        return 1
+    fi
 
     echo "[修复] 修复依赖..."
     fix_dependencies
