@@ -271,16 +271,19 @@ update_store() {
 
     echo "[安装] 正在替换文件..."
 
-    cp -f "${tmp_dir}/store.sh" "${SCRIPT_DIR}/store.sh"
-    cp -f "${tmp_dir}/install.sh" "${SCRIPT_DIR}/install.sh" 2>/dev/null
+    for f in store.sh install.sh; do
+        cp -f "${tmp_dir}/${f}" "${SCRIPT_DIR}/${f}" 2>/dev/null || { echo "[错误] ${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
+    done
 
     for f in network.sh github.sh install.sh ui.sh; do
-        cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null
+        cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null || { echo "[错误] core/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 
     for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
-        cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null
+        cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null || { echo "[错误] plugins/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
+
+    chmod +x "${SCRIPT_DIR}/store.sh" "${SCRIPT_DIR}/core/"*.sh "${SCRIPT_DIR}/plugins/"*.sh 2>/dev/null
 
     rm -rf "$tmp_dir"
     echo "[成功] 文件更新完成"
@@ -289,7 +292,10 @@ update_store() {
     echo "[重启] 正在重新启动脚本..."
     echo ""
 
-    exec sh "${SCRIPT_DIR}/store.sh"
+    exec sh "${SCRIPT_DIR}/store.sh" || {
+        echo "[错误] 重启失败，请手动运行: sh ${SCRIPT_DIR}/store.sh"
+        exit 1
+    }
 }
 
 CUSTOM_CONFIG="${SCRIPT_DIR}/.custom_shortcuts"
