@@ -32,13 +32,19 @@ show_install_plugin_menu() {
 }
 
 show_shortcut_list() {
-    if [ ! -f "${CUSTOM_CONFIG}" ] || [ ! -s "${CUSTOM_CONFIG}" ]; then
+    local found=0
+    for f in /usr/bin/?; do
+        [ -e "$f" ] || continue
+        if [ -L "$f" ] && [ "$(readlink "$f")" = "${SCRIPT_DIR}/store.sh" ] 2>/dev/null; then
+            echo "  $(basename "$f") -> Open APK Store"
+            found=1
+        fi
+    done
+    if [ "$found" -eq 0 ]; then
         echo "[提示] 暂无已设置的快捷键"
     else
-        echo "当前快捷键:"
-        while IFS='=' read -r key cmd; do
-            echo "  ${key} -> ${cmd}"
-        done < "$CUSTOM_CONFIG"
+        echo ""
+        echo "在终端输入以上字母即可启动 APK Store"
     fi
 }
 

@@ -316,8 +316,6 @@ update_store() {
     }
 }
 
-CUSTOM_CONFIG="${SCRIPT_DIR}/.custom_shortcuts"
-
 shortcut_config() {
     echo ""
     echo "================================"
@@ -328,7 +326,7 @@ shortcut_config() {
     show_shortcut_list
     echo ""
 
-    printf "输入快捷键 (单个字母或数字，回车取消): "
+    printf "输入快捷键 (单个字母，回车取消): "
     read -r key < "$TTY" 2>/dev/null || read -r key
     key=$(echo "$key" | tr -d '\r\n ')
 
@@ -352,65 +350,43 @@ shortcut_config() {
             ;;
     esac
 
-    local existing_cmd
-    existing_cmd=$(grep "^${key}=" "$CUSTOM_CONFIG" 2>/dev/null | head -1 | cut -d'=' -f2-)
-    if [ -n "$existing_cmd" ]; then
-        echo "[提示] 快捷键 ${key} 已存在: ${existing_cmd}"
-        printf "覆盖? (y/n): "
-        read -r confirm < "$TTY" 2>/dev/null || read -r confirm
-        case "$confirm" in
-            y|Y|yes|YES)
-                ;;
-            *)
-                echo "[取消]"
-                sleep 1
-                return
-                ;;
-        esac
-    fi
+    local target="/usr/bin/${key}"
+    local store_script="${SCRIPT_DIR}/store.sh"
 
-    printf "输入要执行的命令: "
-    read -r cmd < "$TTY" 2>/dev/null || read -r cmd
-    cmd=$(echo "$cmd" | tr -d '\r')
-
-    if [ -z "$cmd" ]; then
-        echo "[错误] 命令不能为空"
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$store_script" ] 2>/dev/null; then
+        rm -f "$target"
+        echo "[删除] 快捷键 ${key} 已删除"
         sleep 2
         return
     fi
 
-    sed -i "/^${key}=/d" "$CUSTOM_CONFIG" 2>/dev/null
-    echo "${key}=${cmd}" >> "$CUSTOM_CONFIG"
+    if [ -f "$target" ] && [ ! -L "$target" ]; then
+        echo "[错误] ${target} 已被其他命令占用，不能覆盖"
+        sleep 2
+        return
+    fi
+
+    if [ -L "$target" ]; then
+        echo "[错误] ${target} 已被其他程序占用"
+        sleep 2
+        return
+    fi
+
+    chmod +x "$store_script"
+    ln -sf "$store_script" "$target"
 
     echo "[成功] 快捷键 ${key} 已设置"
+    echo "在终端输入 ${key} 即可启动 APK Store"
     sleep 2
 }
 
 run_custom_shortcut() {
     local key="$1"
+    local target="/usr/bin/${key}"
 
-    if [ ! -f "$CUSTOM_CONFIG" ]; then
-        return 1
-    fi
-
-    local cmd
-    cmd=$(grep "^${key}=" "$CUSTOM_CONFIG" 2>/dev/null | head -1 | cut -d'=' -f2-)
-
-    if [ -n "$cmd" ]; then
-        echo ""
-        echo "================================"
-        echo " 执行自定义脚本 [${key}]"
-        echo "================================"
-        echo ""
-        echo "[执行] ${cmd}"
-        echo "--------------------------------"
-        eval "$cmd"
-        echo "--------------------------------"
-        echo "[完成] 执行完毕"
-        echo ""
-        printf "按回车键继续..."
-        read -r dummy
-        return 0
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "${SCRIPT_DIR}/store.sh" ] 2>/dev/null; then
+        echo "[重启] 重新启动 APK Store..."
+        exec sh "${SCRIPT_DIR}/store.sh"
     fi
 
     return 1
