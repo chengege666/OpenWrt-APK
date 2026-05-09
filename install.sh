@@ -4,7 +4,7 @@
 
 REPO_URL="https://github.com/chengege666/OpenWrt-APK"
 RAW_URL="https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main"
-INSTALL_DIR="/tmp/apk-store-installer"
+INSTALL_DIR="/root/apk-store"
 
 echo "================================"
 echo " OpenWrt APK Store 安装器"

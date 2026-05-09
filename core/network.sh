@@ -1,7 +1,7 @@
 #!/bin/sh
 # core/network.sh - 网络工具模块
 
-CACHE_DIR="/tmp/apk-store"
+CACHE_DIR="/root/apk-store/cache"
 MAX_RETRIES=3
 RETRY_DELAY=5
 

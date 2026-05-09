@@ -1,7 +1,7 @@
 #!/bin/sh
 # core/install.sh - APK 安装模块
 
-CACHE_DIR="/tmp/apk-store"
+CACHE_DIR="/root/apk-store/cache"
 
 detect_arch() {
     local arch
