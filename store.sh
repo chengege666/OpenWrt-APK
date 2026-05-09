@@ -360,20 +360,25 @@ shortcut_config() {
         return
     fi
 
-    if [ -f "$target" ] && [ ! -L "$target" ]; then
+    if [ -f "$target" ] || [ -L "$target" ]; then
+        local detected
+        detected=$(head -1 "$target" 2>/dev/null | grep -o "store.sh" || echo "")
+        if [ -n "$detected" ]; then
+            rm -f "$target"
+            echo "[删除] 快捷键 ${key} 已删除"
+            sleep 2
+            return
+        fi
         echo "[错误] ${target} 已被其他命令占用，不能覆盖"
         sleep 2
         return
     fi
 
-    if [ -L "$target" ]; then
-        echo "[错误] ${target} 已被其他程序占用"
-        sleep 2
-        return
-    fi
-
-    chmod +x "$store_script"
-    ln -sf "$store_script" "$target"
+    cat > "$target" << EOF
+#!/bin/sh
+sh ${store_script}
+EOF
+    chmod +x "$target"
 
     echo "[成功] 快捷键 ${key} 已设置"
     echo "在终端输入 ${key} 即可启动 APK Store"
@@ -384,7 +389,14 @@ run_custom_shortcut() {
     local key="$1"
     local target="/usr/bin/${key}"
 
+    [ -e "$target" ] || return 1
+
     if [ -L "$target" ] && [ "$(readlink "$target")" = "${SCRIPT_DIR}/store.sh" ] 2>/dev/null; then
+        echo "[重启] 重新启动 APK Store..."
+        exec sh "${SCRIPT_DIR}/store.sh"
+    fi
+
+    if [ -f "$target" ] && head -1 "$target" 2>/dev/null | grep -q "${SCRIPT_DIR}/store.sh"; then
         echo "[重启] 重新启动 APK Store..."
         exec sh "${SCRIPT_DIR}/store.sh"
     fi

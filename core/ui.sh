@@ -38,6 +38,9 @@ show_shortcut_list() {
         if [ -L "$f" ] && [ "$(readlink "$f")" = "${SCRIPT_DIR}/store.sh" ] 2>/dev/null; then
             echo "  $(basename "$f") -> Open APK Store"
             found=1
+        elif [ -f "$f" ] && head -1 "$f" 2>/dev/null | grep -q "${SCRIPT_DIR}/store.sh"; then
+            echo "  $(basename "$f") -> Open APK Store"
+            found=1
         fi
     done
     if [ "$found" -eq 0 ]; then
