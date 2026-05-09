@@ -240,50 +240,40 @@ update_store() {
     echo "================================"
     echo ""
 
-    local tmp_dir="/tmp/apk-store-update"
-    rm -rf "$tmp_dir"
-    mkdir -p "$tmp_dir/core" "$tmp_dir/plugins"
+    if [ -d "${SCRIPT_DIR}/.git" ]; then
+        echo "[检测] 检测到 Git 仓库"
+        echo "[更新] 正在执行 git pull..."
 
-    echo "[下载] 正在获取最新版本..."
+        cd "${SCRIPT_DIR}" || {
+            echo "[错误] 无法进入脚本目录"
+            sleep 2
+            return
+        }
 
-    local fail=0
-
-    wget -q --timeout=30 -O "${tmp_dir}/store.sh" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/store.sh" 2>/dev/null || fail=1
-    wget -q --timeout=30 -O "${tmp_dir}/install.sh" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/install.sh" 2>/dev/null || true
-
-    for f in network.sh github.sh install.sh ui.sh; do
-        wget -q --timeout=30 -O "${tmp_dir}/core/${f}" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/${f}" 2>/dev/null || true
-    done
-
-    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
-        wget -q --timeout=30 -O "${tmp_dir}/plugins/${f}" "https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/plugins/${f}" 2>/dev/null || true
-    done
-
-    if [ "$fail" -eq 1 ] || [ ! -s "${tmp_dir}/store.sh" ]; then
-        echo "[错误] 核心文件下载失败"
-        rm -rf "$tmp_dir"
-        sleep 2
+        if git pull --ff-only 2>/dev/null; then
+            echo "[成功] Git 更新成功"
+        else
+            local status
+            status=$(git status --porcelain 2>/dev/null)
+            if [ -z "$status" ]; then
+                echo "[提示] 已经是最新的"
+            else
+                echo "[错误] Git 更新失败"
+                sleep 2
+                return
+            fi
+        fi
+    else
+        echo "[检测] 未检测到 Git 仓库"
+        echo "[提示] 请通过以下方式更新："
+        echo "  1. 删除旧目录重新安装"
+        echo "  2. 或使用 git clone 安装"
+        sleep 3
         return
     fi
 
-    echo "[安装] 正在替换文件..."
-
-    cp -f "${tmp_dir}/store.sh" "${SCRIPT_DIR}/store.sh"
-    cp -f "${tmp_dir}/install.sh" "${SCRIPT_DIR}/install.sh" 2>/dev/null
-
-    for f in network.sh github.sh install.sh ui.sh; do
-        cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null
-    done
-
-    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
-        cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null
-    done
-
-    rm -rf "$tmp_dir"
-
-    echo "[成功] 脚本更新完成"
     echo ""
-    echo "[重启] 正在启动新版本..."
+    echo "[重启] 正在重新启动脚本..."
     echo ""
 
     exec sh "${SCRIPT_DIR}/store.sh"
