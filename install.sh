@@ -44,6 +44,7 @@ download_file "${RAW_URL}/plugins/passwall.sh" "${INSTALL_DIR}/plugins/passwall.
 download_file "${RAW_URL}/plugins/mosdns.sh" "${INSTALL_DIR}/plugins/mosdns.sh" && echo "[下载] plugins/mosdns.sh" || { echo "[错误] plugins/mosdns.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/adguardhome.sh" "${INSTALL_DIR}/plugins/adguardhome.sh" && echo "[下载] plugins/adguardhome.sh" || { echo "[错误] plugins/adguardhome.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/docker.sh" "${INSTALL_DIR}/plugins/docker.sh" && echo "[下载] plugins/docker.sh" || { echo "[错误] plugins/docker.sh 下载失败"; exit 1; }
+download_file "${RAW_URL}/plugins/luci-theme-aurora.sh" "${INSTALL_DIR}/plugins/luci-theme-aurora.sh" && echo "[下载] plugins/luci-theme-aurora.sh" || { echo "[错误] plugins/luci-theme-aurora.sh 下载失败"; exit 1; }
 
 chmod +x "${INSTALL_DIR}/store.sh"
 

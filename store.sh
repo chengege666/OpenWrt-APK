@@ -13,6 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/mosdns.sh"
 . "${SCRIPT_DIR}/plugins/adguardhome.sh"
 . "${SCRIPT_DIR}/plugins/docker.sh"
+. "${SCRIPT_DIR}/plugins/luci-theme-aurora.sh"
 
 TTY="/dev/tty"
 
@@ -49,12 +50,16 @@ main_menu() {
                 wait_for_enter
                 ;;
             6)
-                uninstall_menu
+                install_luci_theme_aurora
+                wait_for_enter
                 ;;
             7)
-                update_menu
+                uninstall_menu
                 ;;
             8)
+                update_menu
+                ;;
+            9)
                 custom_menu
                 ;;
             00)
@@ -104,6 +109,10 @@ uninstall_menu() {
                 uninstall_docker
                 wait_for_enter
                 ;;
+            6)
+                uninstall_luci_theme_aurora
+                wait_for_enter
+                ;;
             0)
                 return
                 ;;
@@ -143,6 +152,10 @@ update_menu() {
                 wait_for_enter
                 ;;
             6)
+                update_luci_theme_aurora
+                wait_for_enter
+                ;;
+            7)
                 update_all
                 wait_for_enter
                 ;;
@@ -171,6 +184,7 @@ update_all() {
     update_mosdns
     update_adguardhome
     update_docker
+    update_luci_theme_aurora
 
     echo ""
     echo "================================"
@@ -241,7 +255,7 @@ update_store() {
         wget -q --timeout=30 -O "${tmp_dir}/core/${f}" "${raw_url}/core/${f}" 2>/dev/null || true
     done
 
-    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh; do
+    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh luci-theme-aurora.sh; do
         wget -q --timeout=30 -O "${tmp_dir}/plugins/${f}" "${raw_url}/plugins/${f}" 2>/dev/null || true
     done
 
@@ -262,7 +276,7 @@ update_store() {
         cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null || { echo "[错误] core/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 
-    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh; do
+    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh luci-theme-aurora.sh; do
         cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null || { echo "[错误] plugins/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 
