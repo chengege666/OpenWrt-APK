@@ -242,37 +242,48 @@ update_store() {
     echo "================================"
     echo ""
 
-    if [ ! -d "${SCRIPT_DIR}/.git" ]; then
-        echo "[错误] 未检测到 Git 仓库"
-        echo "[提示] 请使用以下方式安装："
-        echo "  git clone https://github.com/chengege666/OpenWrt-APK.git /root/apk-store"
-        echo "  sh /root/apk-store/store.sh"
-        sleep 3
-        return
-    fi
+    local tmp_dir="/tmp/apk-store-update"
+    rm -rf "$tmp_dir"
+    mkdir -p "$tmp_dir/core" "$tmp_dir/plugins"
 
-    echo "[检测] 检测到 Git 仓库"
-    echo "[更新] 正在执行 git pull..."
+    echo "[下载] 正在获取最新版本..."
 
-    cd "${SCRIPT_DIR}" || {
-        echo "[错误] 无法进入脚本目录"
+    local raw_url="https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main"
+    local fail=0
+
+    wget -q --timeout=30 -O "${tmp_dir}/store.sh" "${raw_url}/store.sh" 2>/dev/null || fail=1
+    wget -q --timeout=30 -O "${tmp_dir}/install.sh" "${raw_url}/install.sh" 2>/dev/null || true
+
+    for f in network.sh github.sh install.sh ui.sh; do
+        wget -q --timeout=30 -O "${tmp_dir}/core/${f}" "${raw_url}/core/${f}" 2>/dev/null || true
+    done
+
+    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
+        wget -q --timeout=30 -O "${tmp_dir}/plugins/${f}" "${raw_url}/plugins/${f}" 2>/dev/null || true
+    done
+
+    if [ "$fail" -eq 1 ] || [ ! -s "${tmp_dir}/store.sh" ]; then
+        echo "[错误] 核心文件下载失败"
+        rm -rf "$tmp_dir"
         sleep 2
         return
-    }
-
-    if git pull --ff-only 2>/dev/null; then
-        echo "[成功] Git 更新成功"
-    else
-        local status
-        status=$(git status --porcelain 2>/dev/null)
-        if [ -z "$status" ]; then
-            echo "[提示] 已经是最新的"
-        else
-            echo "[错误] Git 更新失败"
-            sleep 2
-            return
-        fi
     fi
+
+    echo "[安装] 正在替换文件..."
+
+    cp -f "${tmp_dir}/store.sh" "${SCRIPT_DIR}/store.sh"
+    cp -f "${tmp_dir}/install.sh" "${SCRIPT_DIR}/install.sh" 2>/dev/null
+
+    for f in network.sh github.sh install.sh ui.sh; do
+        cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null
+    done
+
+    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh ddns.sh tailscale.sh; do
+        cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null
+    done
+
+    rm -rf "$tmp_dir"
+    echo "[成功] 文件更新完成"
 
     echo ""
     echo "[重启] 正在重新启动脚本..."
