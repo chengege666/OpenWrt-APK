@@ -141,64 +141,97 @@ install_passwall_from_github() {
     local repo="openwrt-passwall"
 
     echo "[下载] 正在获取最新版本..."
-    local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || {
-        echo "[警告] GitHub API 不可用，尝试直接下载..."
-        release_json=""
-    }
-
     local tag=""
+
+    # 方法1: 使用 GitHub API
+    local release_json
+    release_json=$(get_latest_release "$owner" "$repo" 2>/dev/null)
     if [ -n "$release_json" ]; then
-        tag=$(get_release_tag "$release_json")
+        tag=$(get_release_tag "$release_json" 2>/dev/null)
     fi
 
+    # 方法2: API 失败时，从 releases 页面解析
     if [ -z "$tag" ]; then
-        echo "[提示] 使用默认版本 v5.0-1"
-        tag="v5.0-1"
+        echo "[提示] API 不可用，尝试从页面获取版本..."
+        local releases_page
+        releases_page=$(wget -q --timeout=15 -O- "https://github.com/${owner}/${repo}/releases" 2>/dev/null)
+        if [ -n "$releases_page" ]; then
+            tag=$(echo "$releases_page" | grep -o 'href="[^"]*/releases/tag/[^"]*"' | head -1 | sed 's/.*\/releases\/tag\///;s/"//g')
+        fi
     fi
+
+    # 方法3: 都失败时使用默认版本
+    if [ -z "$tag" ]; then
+        echo "[警告] 无法获取最新版本，使用默认版本"
+        tag="v26.5.3-1"
+    fi
+
     echo "[版本] $tag"
 
     local pkg_ext
     [ "$is_apk" -eq 1 ] && pkg_ext="apk" || pkg_ext="ipk"
 
+    local version_no_v="${tag#v}"
     local base_url="https://github.com/${owner}/${repo}/releases/download/${tag}"
     local download_url=""
     local pkg_name=""
+    local mirror_url=""
 
     if [ "$pkg_type" = "main" ]; then
-        download_url="${base_url}/luci-app-passwall_${tag#v}_all.${pkg_ext}"
+        download_url="${base_url}/luci-app-passwall_${version_no_v}_all.${pkg_ext}"
+        mirror_url="https://ghproxy.net/${download_url}"
         pkg_name="passwall-main.pkg"
     else
-        download_url="${base_url}/luci-i18n-passwall-zh-cn_${tag#v}_all.${pkg_ext}"
+        download_url="${base_url}/luci-i18n-passwall-zh-cn_${version_no_v}_all.${pkg_ext}"
+        mirror_url="https://ghproxy.net/${download_url}"
         pkg_name="passwall-i18n.pkg"
     fi
 
     local download_dir="${CACHE_DIR}/passwall"
     mkdir -p "$download_dir"
 
-    echo "[下载] $download_url"
+    echo "[下载] 尝试主源..."
+    echo "[URL] $download_url"
     if wget -q --timeout=120 -O "${download_dir}/${pkg_name}" "$download_url" 2>/dev/null; then
         if [ -f "${download_dir}/${pkg_name}" ] && [ -s "${download_dir}/${pkg_name}" ]; then
             echo "[成功] 下载完成"
-        else
-            echo "[错误] 下载文件为空"
-            rm -f "${download_dir}/${pkg_name}"
-            return 1
+            install_pkg "${download_dir}/${pkg_name}" "$is_apk" && return 0
         fi
-    else
-        echo "[错误] 下载失败"
-        rm -f "${download_dir}/${pkg_name}"
-        return 1
     fi
+
+    echo "[警告] 主源下载失败，尝试镜像源..."
+    echo "[URL] $mirror_url"
+    if wget -q --timeout=120 -O "${download_dir}/${pkg_name}" "$mirror_url" 2>/dev/null; then
+        if [ -f "${download_dir}/${pkg_name}" ] && [ -s "${download_dir}/${pkg_name}" ]; then
+            echo "[成功] 镜像源下载完成"
+            install_pkg "${download_dir}/${pkg_name}" "$is_apk" && return 0
+        fi
+    fi
+
+    echo "[错误] 所有下载源均失败"
+    rm -f "${download_dir}/${pkg_name}"
+    return 1
+}
+
+install_pkg() {
+    local pkg_path="$1"
+    local is_apk="$2"
 
     echo "[安装] 正在安装..."
     if [ "$is_apk" -eq 1 ]; then
-        apk add --allow-untrusted --force-overwrite "${download_dir}/${pkg_name}" 2>/dev/null || return 1
+        if apk add --allow-untrusted --force-overwrite "$pkg_path" 2>/dev/null; then
+            echo "[成功] 安装完成"
+            return 0
+        fi
     else
-        opkg install --force-overwrite "${download_dir}/${pkg_name}" 2>/dev/null || return 1
+        if opkg install --force-overwrite "$pkg_path" 2>/dev/null; then
+            echo "[成功] 安装完成"
+            return 0
+        fi
     fi
 
-    echo "[成功] 安装完成"
+    echo "[错误] 安装失败"
+    return 1
 }
 
 show_passwall_manual() {
