@@ -50,25 +50,48 @@ install_passwall() {
 install_passwall_deps() {
     local is_apk="$1"
 
-    echo "[依赖] 安装 PassWall 运行依赖..."
+    echo "[依赖] 检查 PassWall 运行依赖..."
 
     local deps="dnsmasq-full curl ca-bundle ip-full iptables iptables-mod-tproxy iptables-mod-extra iptables-mod-nat-extra iptables-mod-iprange iptables-mod-conntrack-extra"
+    local missing_deps=""
 
     if [ "$is_apk" -eq 1 ]; then
-        apk update 2>/dev/null
         for dep in $deps; do
-            echo "[依赖] 安装: $dep"
-            apk add --allow-untrusted "$dep" 2>/dev/null || echo "[警告] $dep 安装失败"
+            if ! apk list --installed 2>/dev/null | grep -q "^${dep}-"; then
+                missing_deps="$missing_deps $dep"
+            fi
         done
+
+        if [ -n "$missing_deps" ]; then
+            echo "[依赖] 安装缺失的依赖: $missing_deps"
+            apk update 2>/dev/null
+            for dep in $missing_deps; do
+                echo "[依赖] 安装: $dep"
+                apk add --allow-untrusted "$dep" 2>/dev/null || echo "[警告] $dep 安装失败"
+            done
+        else
+            echo "[依赖] 所有依赖已安装"
+        fi
     else
-        opkg update 2>/dev/null
         for dep in $deps; do
-            echo "[依赖] 安装: $dep"
-            opkg install "$dep" 2>/dev/null || echo "[警告] $dep 安装失败"
+            if ! opkg list-installed 2>/dev/null | grep -q "^${dep} -"; then
+                missing_deps="$missing_deps $dep"
+            fi
         done
+
+        if [ -n "$missing_deps" ]; then
+            echo "[依赖] 安装缺失的依赖: $missing_deps"
+            opkg update 2>/dev/null
+            for dep in $missing_deps; do
+                echo "[依赖] 安装: $dep"
+                opkg install "$dep" 2>/dev/null || echo "[警告] $dep 安装失败"
+            done
+        else
+            echo "[依赖] 所有依赖已安装"
+        fi
     fi
 
-    echo "[成功] 依赖安装完成"
+    echo "[成功] 依赖检查完成"
 }
 
 install_passwall_main() {
