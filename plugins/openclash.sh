@@ -120,9 +120,23 @@ uninstall_openclash() {
     echo "================================"
     echo ""
 
+    echo "[停止] 停止 OpenClash 服务..."
+    if [ -f /etc/init.d/openclash ]; then
+        /etc/init.d/openclash stop 2>/dev/null
+        /etc/init.d/openclash disable 2>/dev/null
+    fi
+
     uninstall_plugin "luci-app-openclash"
     uninstall_plugin "openclash"
     uninstall_plugin "luci-i18n-openclash-zh-cn"
+
+    echo "[清理] 清理配置文件..."
+    rm -rf /etc/config/openclash 2>/dev/null
+    rm -rf /etc/openclash 2>/dev/null
+    rm -rf /tmp/luci-* 2>/dev/null
+
+    echo "[重启] 重启 LuCI..."
+    restart_luci
 
     show_success
 }
