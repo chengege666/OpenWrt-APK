@@ -22,45 +22,98 @@ install_passwall() {
         25.*|snapshot) is_apk=1 ;;
     esac
 
-    echo "[步骤 1/3] 尝试从系统软件源安装..."
-    if [ "$is_apk" -eq 1 ]; then
-        apk update 2>/dev/null
-        if apk add --allow-untrusted luci-app-passwall luci-i18n-passwall-zh-cn 2>/dev/null; then
-            echo "[成功] 从软件源安装完成"
-            fix_dependencies
-            restart_luci
-            show_success
-            return
-        else
-            echo "[警告] 软件源安装失败，尝试从 GitHub 下载..."
-        fi
-    else
-        opkg update 2>/dev/null
-        if opkg install luci-app-passwall luci-i18n-passwall-zh-cn 2>/dev/null; then
-            echo "[成功] 从软件源安装完成"
-            fix_dependencies
-            restart_luci
-            show_success
-            return
-        else
-            echo "[警告] 软件源安装失败，尝试从 GitHub 下载..."
-        fi
-    fi
-
-    install_passwall_github "$is_apk" || {
-        echo "[错误] PassWall 安装失败"
-        show_passwall_manual
+    echo "[步骤 1/4] 安装依赖..."
+    install_passwall_deps "$is_apk" || {
+        echo "[错误] 依赖安装失败"
         return 1
     }
 
-    echo "[成功] PassWall 安装完成"
+    echo "[步骤 2/4] 安装主程序..."
+    install_passwall_main "$is_apk" || {
+        echo "[错误] 主程序安装失败"
+        return 1
+    }
+
+    echo "[步骤 3/4] 安装中文语言包..."
+    install_passwall_i18n "$is_apk" || {
+        echo "[警告] 中文语言包安装失败，主程序已安装"
+    }
+
+    echo "[步骤 4/4] 配置完成..."
     fix_dependencies
     restart_luci
+
+    echo "[成功] PassWall 安装完成"
     show_success
 }
 
-install_passwall_github() {
+install_passwall_deps() {
     local is_apk="$1"
+
+    echo "[依赖] 安装 PassWall 运行依赖..."
+
+    local deps="dnsmasq-full curl ca-bundle ip-full iptables iptables-mod-tproxy iptables-mod-extra iptables-mod-nat-extra iptables-mod-iprange iptables-mod-conntrack-extra"
+
+    if [ "$is_apk" -eq 1 ]; then
+        apk update 2>/dev/null
+        for dep in $deps; do
+            echo "[依赖] 安装: $dep"
+            apk add --allow-untrusted "$dep" 2>/dev/null || echo "[警告] $dep 安装失败"
+        done
+    else
+        opkg update 2>/dev/null
+        for dep in $deps; do
+            echo "[依赖] 安装: $dep"
+            opkg install "$dep" 2>/dev/null || echo "[警告] $dep 安装失败"
+        done
+    fi
+
+    echo "[成功] 依赖安装完成"
+}
+
+install_passwall_main() {
+    local is_apk="$1"
+
+    echo "[主程序] 尝试从软件源安装..."
+    if [ "$is_apk" -eq 1 ]; then
+        if apk add --allow-untrusted luci-app-passwall 2>/dev/null; then
+            echo "[成功] 从软件源安装主程序完成"
+            return 0
+        fi
+    else
+        if opkg install luci-app-passwall 2>/dev/null; then
+            echo "[成功] 从软件源安装主程序完成"
+            return 0
+        fi
+    fi
+
+    echo "[警告] 软件源安装失败，从 GitHub 下载..."
+    install_passwall_from_github "$is_apk" "main" || return 1
+}
+
+install_passwall_i18n() {
+    local is_apk="$1"
+
+    echo "[语言包] 尝试从软件源安装..."
+    if [ "$is_apk" -eq 1 ]; then
+        if apk add --allow-untrusted luci-i18n-passwall-zh-cn 2>/dev/null; then
+            echo "[成功] 从软件源安装中文语言包完成"
+            return 0
+        fi
+    else
+        if opkg install luci-i18n-passwall-zh-cn 2>/dev/null; then
+            echo "[成功] 从软件源安装中文语言包完成"
+            return 0
+        fi
+    fi
+
+    echo "[警告] 软件源安装失败，从 GitHub 下载..."
+    install_passwall_from_github "$is_apk" "i18n" || return 1
+}
+
+install_passwall_from_github() {
+    local is_apk="$1"
+    local pkg_type="$2"
     local owner="Openwrt-Passwall"
     local repo="openwrt-passwall"
 
@@ -86,58 +139,43 @@ install_passwall_github() {
     [ "$is_apk" -eq 1 ] && pkg_ext="apk" || pkg_ext="ipk"
 
     local base_url="https://github.com/${owner}/${repo}/releases/download/${tag}"
-    local main_url="${base_url}/luci-app-passwall_${tag#v}_all.${pkg_ext}"
-    local i18n_url="${base_url}/luci-i18n-passwall-zh-cn_${tag#v}_all.${pkg_ext}"
+    local download_url=""
+    local pkg_name=""
+
+    if [ "$pkg_type" = "main" ]; then
+        download_url="${base_url}/luci-app-passwall_${tag#v}_all.${pkg_ext}"
+        pkg_name="passwall-main.pkg"
+    else
+        download_url="${base_url}/luci-i18n-passwall-zh-cn_${tag#v}_all.${pkg_ext}"
+        pkg_name="passwall-i18n.pkg"
+    fi
 
     local download_dir="${CACHE_DIR}/passwall"
     mkdir -p "$download_dir"
 
-    echo "[下载] 主包..."
-    if wget -q --timeout=120 -O "${download_dir}/passwall-main.pkg" "$main_url" 2>/dev/null; then
-        if [ -f "${download_dir}/passwall-main.pkg" ] && [ -s "${download_dir}/passwall-main.pkg" ]; then
-            echo "[成功] 主包下载完成"
+    echo "[下载] $download_url"
+    if wget -q --timeout=120 -O "${download_dir}/${pkg_name}" "$download_url" 2>/dev/null; then
+        if [ -f "${download_dir}/${pkg_name}" ] && [ -s "${download_dir}/${pkg_name}" ]; then
+            echo "[成功] 下载完成"
         else
-            echo "[错误] 主包下载文件为空"
-            rm -f "${download_dir}/passwall-main.pkg"
+            echo "[错误] 下载文件为空"
+            rm -f "${download_dir}/${pkg_name}"
             return 1
         fi
     else
-        echo "[错误] 主包下载失败"
-        rm -f "${download_dir}/passwall-main.pkg"
+        echo "[错误] 下载失败"
+        rm -f "${download_dir}/${pkg_name}"
         return 1
     fi
 
-    echo "[下载] 中文包..."
-    if wget -q --timeout=60 -O "${download_dir}/passwall-i18n.pkg" "$i18n_url" 2>/dev/null; then
-        if [ -f "${download_dir}/passwall-i18n.pkg" ] && [ -s "${download_dir}/passwall-i18n.pkg" ]; then
-            echo "[成功] 中文包下载完成"
-        else
-            echo "[警告] 中文包下载失败，将只安装主包"
-            rm -f "${download_dir}/passwall-i18n.pkg"
-            i18n_url=""
-        fi
-    else
-        echo "[警告] 中文包下载失败，将只安装主包"
-        rm -f "${download_dir}/passwall-i18n.pkg"
-        i18n_url=""
-    fi
-
-    echo "[安装] 正在安装 PassWall..."
+    echo "[安装] 正在安装..."
     if [ "$is_apk" -eq 1 ]; then
-        if [ -n "$i18n_url" ]; then
-            apk add --allow-untrusted --force-overwrite "${download_dir}/passwall-main.pkg" "${download_dir}/passwall-i18n.pkg" 2>/dev/null || return 1
-        else
-            apk add --allow-untrusted --force-overwrite "${download_dir}/passwall-main.pkg" 2>/dev/null || return 1
-        fi
+        apk add --allow-untrusted --force-overwrite "${download_dir}/${pkg_name}" 2>/dev/null || return 1
     else
-        if [ -n "$i18n_url" ]; then
-            opkg install --force-overwrite "${download_dir}/passwall-main.pkg" "${download_dir}/passwall-i18n.pkg" 2>/dev/null || return 1
-        else
-            opkg install --force-overwrite "${download_dir}/passwall-main.pkg" 2>/dev/null || return 1
-        fi
+        opkg install --force-overwrite "${download_dir}/${pkg_name}" 2>/dev/null || return 1
     fi
 
-    echo "[成功] PassWall 安装完成"
+    echo "[成功] 安装完成"
 }
 
 show_passwall_manual() {
