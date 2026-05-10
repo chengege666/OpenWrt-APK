@@ -41,9 +41,33 @@ install_passwall() {
     fi
 
     if [ "$is_apk" -eq 1 ]; then
-        echo "[步骤 2/3] 从 GitHub 下载 APK 安装..."
-        install_passwall_apk
-        return $?
+        echo "[步骤 2/3] 安装 LuCI 兼容层..."
+        apk add --allow-untrusted luci-compat 2>&1 | tail -3
+
+        echo "[步骤 3/3] 添加 passwall-build 软件源安装 PassWall..."
+        local pw_arch
+        pw_arch=$(echo "$DISTRIB_ARCH" | tr -d ' \n')
+        local base_url="https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/packages-${release_ver}/${pw_arch}"
+
+        for feed in passwall_luci passwall_packages; do
+            echo "src/gz $feed ${base_url}/${feed}" >> /etc/opkg/customfeeds.conf 2>/dev/null
+        done
+
+        opkg update 2>/dev/null
+        opkg install luci-app-passwall luci-i18n-passwall-zh-cn 2>&1
+        local ret=$?
+
+        if [ "$ret" -eq 0 ]; then
+            echo "[成功] PassWall 安装完成"
+            fix_dependencies
+            restart_luci
+            show_success
+            return
+        fi
+
+        echo "[错误] passwall-build 安装失败"
+        show_passwall_manual
+        return 1
     fi
 
     echo "[步骤 2/3] 添加 passwall-build 第三方软件源..."
@@ -57,7 +81,7 @@ install_passwall() {
 
     echo "[步骤 3/3] 安装 PassWall..."
     opkg update 2>/dev/null
-    opkg install luci-app-passwall luci-i18n-passwall-zh-cn 2>/dev/null
+    opkg install luci-app-passwall luci-i18n-passwall-zh-cn 2>&1
 
     if [ $? -ne 0 ]; then
         echo "[错误] 安装失败"
@@ -73,71 +97,6 @@ install_passwall() {
     fix_dependencies
     restart_luci
     show_success
-}
-
-install_passwall_apk() {
-    local owner="Openwrt-Passwall"
-    local repo="openwrt-passwall"
-
-    local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || {
-        echo "[错误] 无法获取 PassWall 版本信息"
-        show_passwall_manual
-        return 1
-    }
-
-    local tag
-    tag=$(get_release_tag "$release_json")
-    echo "[版本] $tag"
-
-    local all_urls
-    all_urls=$(get_download_urls "$release_json")
-
-    local luci_url
-    luci_url=$(echo "$all_urls" | grep "luci-app-passwall.*\.apk$" | head -1)
-
-    local i18n_url
-    i18n_url=$(echo "$all_urls" | grep "luci-i18n-passwall-zh-cn.*\.apk$" | head -1)
-
-    if [ -z "$luci_url" ]; then
-        echo "[错误] 未找到 APK 安装包"
-        show_passwall_manual
-        return 1
-    fi
-
-    local download_dir="${CACHE_DIR}/passwall"
-    rm -rf "$download_dir"
-    mkdir -p "$download_dir"
-
-    echo "[下载] luci-app-passwall.apk"
-    if ! wget -q --timeout=60 -O "${download_dir}/luci-app-passwall.apk" "$luci_url" 2>/dev/null; then
-        echo "[错误] 下载失败"
-        show_passwall_manual
-        return 1
-    fi
-
-    if [ -n "$i18n_url" ]; then
-        echo "[下载] luci-i18n-passwall-zh-cn.apk"
-        wget -q --timeout=60 -O "${download_dir}/luci-i18n-passwall-zh-cn.apk" "$i18n_url" 2>/dev/null
-    fi
-
-    echo "[依赖] 安装 xray-core 运行依赖..."
-    apk add --allow-untrusted xray-core 2>&1 | tail -3
-
-    echo "[安装] 安装 PassWall 管理界面..."
-    cd "$download_dir" || return 1
-    if apk add --allow-untrusted --force-overwrite --force-non-repository *.apk 2>&1; then
-        echo "[成功] PassWall 安装完成"
-        echo "[提示] 如需补全依赖: apk add --allow-untrusted xray-core sing-box chinadns-ng"
-        fix_dependencies
-        restart_luci
-        show_success
-        return 0
-    fi
-
-    echo "[错误] PassWall 安装失败"
-    show_passwall_manual
-    return 1
 }
 
 show_passwall_manual() {
