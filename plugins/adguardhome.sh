@@ -25,29 +25,34 @@ install_adguardhome() {
         25.*|snapshot) is_apk=1 ;;
     esac
 
-    echo "[步骤 1/3] 从系统软件源安装核心..."
+    echo "[步骤 1/3] 安装 AdGuardHome 核心..."
+    local core_installed=0
+
     if [ "$is_apk" -eq 1 ]; then
-        echo "[更新] 刷新软件源..."
+        echo "[尝试] 从软件源安装..."
         apk update 2>/dev/null
-        echo "[安装] 安装 AdGuardHome 核心..."
         if apk add --allow-untrusted adguardhome 2>/dev/null; then
-            echo "[成功] 核心安装完成"
+            echo "[成功] 从软件源安装完成"
+            core_installed=1
         else
-            echo "[错误] AdGuardHome 核心安装失败"
-            echo "[提示] 请检查软件源配置或手动执行: apk add adguardhome"
-            return 1
+            echo "[警告] 软件源安装失败，尝试从 GitHub 下载..."
         fi
     else
-        echo "[更新] 刷新软件源..."
+        echo "[尝试] 从软件源安装..."
         opkg update 2>/dev/null
-        echo "[安装] 安装 AdGuardHome 核心..."
         if opkg install adguardhome 2>/dev/null; then
-            echo "[成功] 核心安装完成"
+            echo "[成功] 从软件源安装完成"
+            core_installed=1
         else
-            echo "[错误] AdGuardHome 核心安装失败"
-            echo "[提示] 请检查软件源配置或手动执行: opkg install adguardhome"
-            return 1
+            echo "[警告] 软件源安装失败，尝试从 GitHub 下载..."
         fi
+    fi
+
+    if [ "$core_installed" -eq 0 ]; then
+        install_adguardhome_core_github "$arch" || {
+            echo "[错误] AdGuardHome 核心安装失败"
+            return 1
+        }
     fi
 
     echo "[步骤 2/3] 安装 LuCI 界面..."
@@ -92,6 +97,142 @@ install_adguardhome() {
     echo ""
 
     show_success
+}
+
+install_adguardhome_core_github() {
+    local arch="$1"
+    local owner="AdguardTeam"
+    local repo="AdGuardHome"
+
+    echo "[下载] 正在获取最新版本..."
+    local release_json
+    release_json=$(get_latest_release "$owner" "$repo") || return 1
+
+    local tag
+    tag=$(get_release_tag "$release_json")
+    echo "[版本] $tag"
+
+    local all_urls
+    all_urls=$(get_download_urls "$release_json")
+
+    local download_url=""
+    case "$arch" in
+        x86_64)
+            download_url=$(echo "$all_urls" | grep "AdGuardHome_linux_amd64.tar.gz" | head -1)
+            ;;
+        aarch64)
+            download_url=$(echo "$all_urls" | grep "AdGuardHome_linux_arm64.tar.gz" | head -1)
+            ;;
+        arm)
+            download_url=$(echo "$all_urls" | grep "AdGuardHome_linux_armv7.tar.gz" | head -1)
+            ;;
+        mipsel)
+            download_url=$(echo "$all_urls" | grep "AdGuardHome_linux_mipsle_softfloat.tar.gz" | head -1)
+            ;;
+        mips)
+            download_url=$(echo "$all_urls" | grep "AdGuardHome_linux_mips_softfloat.tar.gz" | head -1)
+            ;;
+        *)
+            echo "[错误] 不支持的架构: $arch"
+            return 1
+            ;;
+    esac
+
+    if [ -z "$download_url" ]; then
+        echo "[错误] 未找到适合 $arch 架构的下载链接"
+        return 1
+    fi
+
+    local download_dir="${CACHE_DIR}/adguardhome/core"
+    mkdir -p "$download_dir"
+
+    echo "[下载] $download_url"
+    local tar_file="${download_dir}/AdGuardHome.tar.gz"
+    if wget -q --timeout=120 -O "$tar_file" "$download_url" 2>/dev/null; then
+        if [ -f "$tar_file" ] && [ -s "$tar_file" ]; then
+            echo "[成功] 下载完成"
+        else
+            echo "[错误] 下载文件为空"
+            rm -f "$tar_file"
+            return 1
+        fi
+    else
+        echo "[错误] 下载失败"
+        rm -f "$tar_file"
+        return 1
+    fi
+
+    echo "[解压] 正在解压..."
+    local extract_dir="${download_dir}/extracted"
+    rm -rf "$extract_dir"
+    mkdir -p "$extract_dir"
+
+    if tar -xzf "$tar_file" -C "$extract_dir" 2>/dev/null; then
+        echo "[成功] 解压完成"
+    else
+        echo "[错误] 解压失败"
+        rm -rf "$extract_dir"
+        return 1
+    fi
+
+    echo "[安装] 正在安装二进制文件..."
+    local bin_dir="$extract_dir/AdGuardHome"
+    if [ ! -f "${bin_dir}/AdGuardHome" ]; then
+        bin_dir=$(find "$extract_dir" -name "AdGuardHome" -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null)
+    fi
+
+    if [ -z "$bin_dir" ] || [ ! -f "${bin_dir}/AdGuardHome" ]; then
+        echo "[错误] 未找到 AdGuardHome 二进制文件"
+        rm -rf "$extract_dir"
+        return 1
+    fi
+
+    mkdir -p /usr/bin/AdGuardHome
+    cp -f "${bin_dir}/AdGuardHome" /usr/bin/AdGuardHome/AdGuardHome
+    chmod +x /usr/bin/AdGuardHome/AdGuardHome
+
+    if [ -f /usr/bin/AdGuardHome/AdGuardHome ]; then
+        echo "[成功] 二进制文件安装完成"
+    else
+        echo "[错误] 二进制文件安装失败"
+        rm -rf "$extract_dir"
+        return 1
+    fi
+
+    rm -rf "$extract_dir"
+    rm -f "$tar_file"
+
+    echo "[配置] 创建初始化脚本..."
+    cat > /etc/init.d/adguardhome << 'INITEOF'
+#!/bin/sh /etc/rc.common
+START=95
+
+start() {
+    /usr/bin/AdGuardHome/AdGuardHome -w /etc/AdGuardHome -h 0.0.0.0 -p 3000 &
+}
+
+stop() {
+    killall AdGuardHome 2>/dev/null
+}
+
+restart() {
+    stop
+    sleep 2
+    start
+}
+
+enable() {
+    mkdir -p /etc/rc.d
+    ln -sf ../init.d/adguardhome /etc/rc.d/S95adguardhome 2>/dev/null
+}
+
+disable() {
+    rm -f /etc/rc.d/S95adguardhome 2>/dev/null
+}
+INITEOF
+    chmod +x /etc/init.d/adguardhome
+
+    echo "[成功] AdGuardHome 核心安装完成"
 }
 
 install_adguardhome_luci_github() {
