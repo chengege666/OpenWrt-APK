@@ -99,7 +99,22 @@ install_apks() {
 
 fix_dependencies() {
     echo "[修复] 正在修复依赖关系..."
-    apk fix --allow-untrusted 2>/dev/null
+
+    . /etc/openwrt_release 2>/dev/null
+    local release_ver
+    release_ver=$(echo "$DISTRIB_RELEASE" | cut -d'.' -f1,2)
+    local is_apk=0
+    case "$release_ver" in
+        25.*|snapshot) is_apk=1 ;;
+    esac
+
+    if [ "$is_apk" -eq 1 ]; then
+        apk fix --allow-untrusted 2>/dev/null
+    else
+        opkg update 2>/dev/null
+        opkg install --force-reinstall $(opkg list-installed 2>/dev/null | cut -d' ' -f1) 2>/dev/null
+    fi
+
     echo "[成功] 依赖修复完成"
 }
 
@@ -131,9 +146,23 @@ uninstall_plugin() {
 
     echo "[卸载] 正在卸载: $plugin_name"
 
-    apk del "$plugin_name" 2>/dev/null
-    apk del "luci-app-${plugin_name}" 2>/dev/null
-    apk del "luci-i18n-${plugin_name}-zh-cn" 2>/dev/null
+    . /etc/openwrt_release 2>/dev/null
+    local release_ver
+    release_ver=$(echo "$DISTRIB_RELEASE" | cut -d'.' -f1,2)
+    local is_apk=0
+    case "$release_ver" in
+        25.*|snapshot) is_apk=1 ;;
+    esac
+
+    if [ "$is_apk" -eq 1 ]; then
+        apk del "$plugin_name" 2>/dev/null
+        apk del "luci-app-${plugin_name}" 2>/dev/null
+        apk del "luci-i18n-${plugin_name}-zh-cn" 2>/dev/null
+    else
+        opkg remove "$plugin_name" 2>/dev/null
+        opkg remove "luci-app-${plugin_name}" 2>/dev/null
+        opkg remove "luci-i18n-${plugin_name}-zh-cn" 2>/dev/null
+    fi
 
     echo "[成功] 卸载完成: $plugin_name"
 }
