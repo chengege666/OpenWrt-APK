@@ -163,7 +163,7 @@ install_passwall_from_github() {
     # 方法3: 都失败时使用默认版本
     if [ -z "$tag" ]; then
         echo "[警告] 无法获取最新版本，使用默认版本"
-        tag="v26.5.3-1"
+        tag="26.1.17-1"
     fi
 
     echo "[版本] $tag"
@@ -171,19 +171,31 @@ install_passwall_from_github() {
     local pkg_ext
     [ "$is_apk" -eq 1 ] && pkg_ext="apk" || pkg_ext="ipk"
 
-    local version_no_v="${tag#v}"
     local base_url="https://github.com/${owner}/${repo}/releases/download/${tag}"
     local download_url=""
     local pkg_name=""
     local mirror_url=""
 
+    # 根据包类型和格式构造正确的文件名
+    # APK: luci-app-passwall-26.1.17-r1.apk
+    # IPK: luci-app-passwall_26.1.17-r1_all.ipk
     if [ "$pkg_type" = "main" ]; then
-        download_url="${base_url}/luci-app-passwall_${version_no_v}_all.${pkg_ext}"
-        mirror_url="https://ghproxy.net/${download_url}"
+        if [ "$is_apk" -eq 1 ]; then
+            download_url="${base_url}/luci-app-passwall-${tag}.apk"
+            mirror_url="https://ghproxy.net/github.com/${owner}/${repo}/releases/download/${tag}/luci-app-passwall-${tag}.apk"
+        else
+            download_url="${base_url}/luci-app-passwall_${tag}_all.ipk"
+            mirror_url="https://ghproxy.net/github.com/${owner}/${repo}/releases/download/${tag}/luci-app-passwall_${tag}_all.ipk"
+        fi
         pkg_name="passwall-main.pkg"
     else
-        download_url="${base_url}/luci-i18n-passwall-zh-cn_${version_no_v}_all.${pkg_ext}"
-        mirror_url="https://ghproxy.net/${download_url}"
+        if [ "$is_apk" -eq 1 ]; then
+            download_url="${base_url}/luci-i18n-passwall-zh-cn-${tag}.apk"
+            mirror_url="https://ghproxy.net/github.com/${owner}/${repo}/releases/download/${tag}/luci-i18n-passwall-zh-cn-${tag}.apk"
+        else
+            download_url="${base_url}/luci-i18n-passwall-zh-cn_${tag}_all.ipk"
+            mirror_url="https://ghproxy.net/github.com/${owner}/${repo}/releases/download/${tag}/luci-i18n-passwall-zh-cn_${tag}_all.ipk"
+        fi
         pkg_name="passwall-i18n.pkg"
     fi
 
