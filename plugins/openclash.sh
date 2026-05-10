@@ -4,34 +4,17 @@
 install_openclash_deps() {
     echo "[依赖] 检查 OpenClash 运行依赖..."
 
-    local common_pkgs="bash dnsmasq-full curl ca-bundle ip-full ruby ruby-yaml unzip luci-compat luci luci-base"
+    local common_pkgs="bash dnsmasq-full curl ca-bundle ip-full ruby ruby-yaml kmod-tun kmod-inet-diag unzip luci-compat luci luci-base"
 
     echo "[依赖] 安装基础依赖..."
     apk add --allow-untrusted $common_pkgs 2>/dev/null
-
-    echo "[依赖] 安装内核模块..."
-    for kmod in kmod-tun kmod-inet-diag; do
-        local pkg_name
-        pkg_name=$(apk search -q "$kmod" 2>/dev/null | head -1)
-        if [ -n "$pkg_name" ]; then
-            apk add --allow-untrusted "$pkg_name" 2>/dev/null
-        else
-            echo "[警告] 未找到 $kmod 包"
-        fi
-    done
 
     local firewall
     firewall=$(uci get firewall.@defaults[0].fw4_forward 2>/dev/null && echo "nftables" || echo "iptables")
 
     if [ "$firewall" = "nftables" ]; then
         echo "[依赖] 检测到 nftables 防火墙，安装 nftables 模块..."
-        local pkg_name
-        pkg_name=$(apk search -q kmod-nft-tproxy 2>/dev/null | head -1)
-        if [ -n "$pkg_name" ]; then
-            apk add --allow-untrusted "$pkg_name" 2>/dev/null
-        else
-            echo "[警告] 未找到 kmod-nft-tproxy 包"
-        fi
+        apk add --allow-untrusted kmod-nft-tproxy 2>/dev/null
     else
         echo "[依赖] 检测到 iptables 防火墙，安装 iptables 模块..."
         apk add --allow-untrusted iptables ipset iptables-mod-tproxy iptables-mod-extra 2>/dev/null
@@ -120,23 +103,9 @@ uninstall_openclash() {
     echo "================================"
     echo ""
 
-    echo "[停止] 停止 OpenClash 服务..."
-    if [ -f /etc/init.d/openclash ]; then
-        /etc/init.d/openclash stop 2>/dev/null
-        /etc/init.d/openclash disable 2>/dev/null
-    fi
-
     uninstall_plugin "luci-app-openclash"
     uninstall_plugin "openclash"
     uninstall_plugin "luci-i18n-openclash-zh-cn"
-
-    echo "[清理] 清理配置文件..."
-    rm -rf /etc/config/openclash 2>/dev/null
-    rm -rf /etc/openclash 2>/dev/null
-    rm -rf /tmp/luci-* 2>/dev/null
-
-    echo "[重启] 重启 LuCI..."
-    restart_luci
 
     show_success
 }
