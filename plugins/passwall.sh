@@ -61,7 +61,7 @@ install_passwall() {
 
 install_passwall_github() {
     local is_apk="$1"
-    local owner="xiaorouji"
+    local owner="Openwrt-Passwall"
     local repo="openwrt-passwall"
 
     echo "[下载] 正在获取最新版本..."
@@ -147,7 +147,7 @@ show_passwall_manual() {
     echo "================================"
     echo ""
     echo "方法一: 从 GitHub 下载 APK/IPK 安装"
-    echo "  访问: https://github.com/xiaorouji/openwrt-passwall/releases"
+    echo "  访问: https://github.com/Openwrt-Passwall/openwrt-passwall/releases"
     echo "  下载对应架构的 luci-app-passwall 包"
     echo "  apk add --allow-untrusted luci-app-passwall*.apk"
     echo ""
