@@ -15,6 +15,12 @@ install_openclash_deps() {
     if [ "$firewall" = "nftables" ]; then
         echo "[依赖] 检测到 nftables 防火墙，安装 nftables 模块..."
         apk add --allow-untrusted kmod-nft-tproxy 2>/dev/null
+        if modprobe nft_tproxy 2>/dev/null; then
+            echo "[依赖] nft_tproxy 模块已加载"
+            echo "nft_tproxy" >> /etc/modules.d/nft-tproxy.conf 2>/dev/null
+        else
+            echo "[警告] nft_tproxy 模块加载失败，增强模式可能不可用"
+        fi
     else
         echo "[依赖] 检测到 iptables 防火墙，安装 iptables 模块..."
         apk add --allow-untrusted iptables ipset iptables-mod-tproxy iptables-mod-extra 2>/dev/null
