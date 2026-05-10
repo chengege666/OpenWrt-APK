@@ -63,11 +63,19 @@ install_passwall_github() {
     local is_apk="$1"
     local owner="xiaorouji"
     local repo="openwrt-passwall"
-    local plugin_name="passwall"
 
     echo "[下载] 正在获取最新版本..."
     local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || return 1
+    release_json=$(get_latest_release "$owner" "$repo") || {
+        echo "[错误] 无法获取 GitHub Releases 信息"
+        echo "[提示] 请检查网络连接或手动下载安装"
+        return 1
+    }
+
+    if [ -z "$release_json" ]; then
+        echo "[错误] GitHub API 返回空数据"
+        return 1
+    fi
 
     local tag
     tag=$(get_release_tag "$release_json")
@@ -75,15 +83,25 @@ install_passwall_github() {
 
     local all_urls
     all_urls=$(get_download_urls "$release_json")
+    
+    if [ -z "$all_urls" ]; then
+        echo "[错误] 未找到任何下载链接"
+        echo "[提示] 该项目可能不提供预编译包"
+        return 1
+    fi
+
     local pkg_ext
     [ "$is_apk" -eq 1 ] && pkg_ext="apk" || pkg_ext="ipk"
 
+    echo "[调试] 可用包类型: $(echo "$all_urls" | grep -o '\.[^.]*$' | sort -u | tr '\n' ' ')"
+
     local main_url i18n_url
-    main_url=$(echo "$all_urls" | grep "luci-app-passwall.*\.${pkg_ext}$" | grep -iv "i18n" | head -1)
-    i18n_url=$(echo "$all_urls" | grep "luci-i18n-passwall-zh-cn.*\.${pkg_ext}$" | head -1)
+    main_url=$(echo "$all_urls" | grep "luci-app-passwall" | grep "\.${pkg_ext}$" | grep -iv "i18n" | head -1)
+    i18n_url=$(echo "$all_urls" | grep "luci-i18n-passwall-zh-cn" | grep "\.${pkg_ext}$" | head -1)
 
     if [ -z "$main_url" ]; then
-        echo "[错误] 未找到 PassWall 主包"
+        echo "[错误] 未找到 PassWall 主包 (.${pkg_ext})"
+        echo "[提示] 该项目可能不提供预编译包，请尝试手动安装"
         return 1
     fi
 
