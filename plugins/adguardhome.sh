@@ -106,10 +106,46 @@ install_adguardhome() {
         return 1
     fi
 
+    echo "[配置] 写入核心更新链接..."
+    setup_adguardhome_links
+
     echo "[成功] AdGuardHome 安装完成"
     fix_dependencies
     restart_luci
     show_success
+}
+
+setup_adguardhome_links() {
+    local link_file="/usr/share/AdGuardHome/links.txt"
+
+    if [ ! -f "$link_file" ]; then
+        mkdir -p /usr/share/AdGuardHome 2>/dev/null
+    fi
+
+    local arch
+    arch=$(detect_arch) || return 1
+
+    case "$arch" in
+        x86_64)
+            echo "https://github.com/AdguardTeam/AdGuardHome/releases/download/{version}/AdGuardHome_linux_amd64.tar.gz" > "$link_file"
+            ;;
+        aarch64)
+            echo "https://github.com/AdguardTeam/AdGuardHome/releases/download/{version}/AdGuardHome_linux_arm64.tar.gz" > "$link_file"
+            ;;
+        arm)
+            echo "https://github.com/AdguardTeam/AdGuardHome/releases/download/{version}/AdGuardHome_linux_armv7.tar.gz" > "$link_file"
+            ;;
+        mipsel)
+            echo "https://github.com/AdguardTeam/AdGuardHome/releases/download/{version}/AdGuardHome_linux_mipsle_softfloat.tar.gz" > "$link_file"
+            echo "https://github.com/AdguardTeam/AdGuardHome/releases/download/{version}/AdGuardHome_linux_mipsle_hardfloat.tar.gz" >> "$link_file"
+            ;;
+        mips)
+            echo "https://github.com/AdguardTeam/AdGuardHome/releases/download/{version}/AdGuardHome_linux_mips_softfloat.tar.gz" > "$link_file"
+            echo "https://github.com/AdguardTeam/AdGuardHome/releases/download/{version}/AdGuardHome_linux_mips_hardfloat.tar.gz" >> "$link_file"
+            ;;
+    esac
+
+    echo "[核心] 更新链接已写入: $link_file"
 }
 
 uninstall_adguardhome() {
