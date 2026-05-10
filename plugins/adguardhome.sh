@@ -27,15 +27,27 @@ install_adguardhome() {
 
     echo "[步骤 1/3] 从系统软件源安装核心..."
     if [ "$is_apk" -eq 1 ]; then
-        apk update && apk add --allow-untrusted adguardhome || {
+        echo "[更新] 刷新软件源..."
+        apk update 2>/dev/null
+        echo "[安装] 安装 AdGuardHome 核心..."
+        if apk add --allow-untrusted adguardhome 2>/dev/null; then
+            echo "[成功] 核心安装完成"
+        else
             echo "[错误] AdGuardHome 核心安装失败"
+            echo "[提示] 请检查软件源配置或手动执行: apk add adguardhome"
             return 1
-        }
+        fi
     else
-        opkg update && opkg install adguardhome || {
+        echo "[更新] 刷新软件源..."
+        opkg update 2>/dev/null
+        echo "[安装] 安装 AdGuardHome 核心..."
+        if opkg install adguardhome 2>/dev/null; then
+            echo "[成功] 核心安装完成"
+        else
             echo "[错误] AdGuardHome 核心安装失败"
+            echo "[提示] 请检查软件源配置或手动执行: opkg install adguardhome"
             return 1
-        }
+        fi
     fi
 
     echo "[步骤 2/3] 安装 LuCI 界面..."
