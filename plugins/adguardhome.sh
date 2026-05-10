@@ -83,6 +83,10 @@ install_adguardhome() {
     fi
 
     echo "[成功] AdGuardHome 安装完成"
+    echo ""
+    echo "说明：核心升级链接已写入 /usr/share/AdGuardHome/links.txt"
+    echo "链接前的 # 号已自动去除，可在 LuCI 界面正常更新核心版本"
+    echo ""
     fix_dependencies
     restart_luci
     show_success
