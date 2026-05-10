@@ -21,24 +21,68 @@ install_adguardhome() {
         25.*|snapshot) is_apk=1 ;;
     esac
 
-    local install_ok=1
+    local pm
+    [ "$is_apk" -eq 1 ] && pm="apk" || pm="opkg"
+
+    echo "[步骤 1/3] 从系统软件源安装核心..."
     if [ "$is_apk" -eq 1 ]; then
         apk update 2>/dev/null
-        apk add --allow-untrusted luci-app-adguardhome luci-i18n-adguardhome-zh-cn adguardhome 2>/dev/null && install_ok=0
     else
         opkg update 2>/dev/null
-        opkg install luci-app-adguardhome luci-i18n-adguardhome-zh-cn adguardhome 2>/dev/null && install_ok=0
     fi
 
-    if [ "$install_ok" -eq 0 ]; then
-        echo "[成功] AdGuardHome 安装完成"
-        fix_dependencies
-        restart_luci
-        show_success
-        return
+    local core_installed=0
+    if [ "$is_apk" -eq 1 ]; then
+        apk add --allow-untrusted adguardhome 2>&1 | tail -3
+        if apk list --installed 2>/dev/null | grep -q "adguardhome"; then
+            core_installed=1
+        fi
+    else
+        opkg install adguardhome 2>&1 | tail -3
+        if opkg list-installed 2>/dev/null | grep -q "adguardhome"; then
+            core_installed=1
+        fi
     fi
 
-    echo "[重试] 系统软件源中未找到，从 GitHub 下载..."
+    if [ "$core_installed" -eq 0 ]; then
+        echo "[错误] AdGuardHome 核心安装失败"
+        return 1
+    fi
+    echo "[核心] AdGuardHome 已安装"
+
+    echo "[步骤 2/3] 从系统软件源安装 LuCI 界面..."
+    local luci_installed=0
+    if [ "$is_apk" -eq 1 ]; then
+        apk add --allow-untrusted luci-app-adguardhome luci-i18n-adguardhome-zh-cn 2>&1 | tail -3
+        if apk list --installed 2>/dev/null | grep -q "luci-app-adguardhome"; then
+            luci_installed=1
+        fi
+    else
+        opkg install luci-app-adguardhome luci-i18n-adguardhome-zh-cn 2>&1 | tail -3
+        if opkg list-installed 2>/dev/null | grep -q "luci-app-adguardhome"; then
+            luci_installed=1
+        fi
+    fi
+
+    if [ "$luci_installed" -eq 0 ]; then
+        echo "[步骤 3/3] 系统源中无 LuCI 界面，从 GitHub 下载..."
+        install_adguardhome_luci_github "$is_apk"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    fi
+
+    echo "[配置] 写入核心更新链接..."
+    setup_adguardhome_links
+
+    echo "[成功] AdGuardHome 安装完成"
+    fix_dependencies
+    restart_luci
+    show_success
+}
+
+install_adguardhome_luci_github() {
+    local is_apk="$1"
 
     local owner="stevenjoezhang"
     local repo="luci-app-adguardhome"
@@ -69,58 +113,44 @@ install_adguardhome() {
     fi
 
     if [ -z "$pkg_url" ]; then
-        echo "[错误] 未找到 AdGuardHome 安装包"
+        echo "[错误] 未找到 LuCI 界面安装包"
         return 1
     fi
 
     local download_dir="${CACHE_DIR}/${plugin_name}"
     mkdir -p "$download_dir"
 
-    local filename
-    filename=$(basename "$pkg_url")
-    echo "[下载] $filename"
-    if ! wget -q --timeout=60 -O "${download_dir}/${filename}" "$pkg_url" 2>/dev/null; then
+    echo "[下载] luci-app-adguardhome.${pkg_ext}"
+    if ! wget -q --timeout=60 -O "${download_dir}/luci-app-adguardhome.${pkg_ext}" "$pkg_url" 2>/dev/null; then
         echo "[错误] 下载失败"
-        rm -f "${download_dir}/${filename}"
         return 1
     fi
 
     if [ -n "$i18n_url" ]; then
-        local i18n_file
-        i18n_file=$(basename "$i18n_url")
-        echo "[下载] $i18n_file"
-        wget -q --timeout=60 -O "${download_dir}/${i18n_file}" "$i18n_url" 2>/dev/null
+        echo "[下载] luci-i18n-adguardhome-zh-cn.${pkg_ext}"
+        wget -q --timeout=60 -O "${download_dir}/luci-i18n-adguardhome-zh-cn.${pkg_ext}" "$i18n_url" 2>/dev/null
     fi
 
-    echo "[安装] 正在安装..."
+    echo "[安装] 安装 LuCI 界面..."
     cd "$download_dir" || return 1
-    install_ok=1
     if [ "$is_apk" -eq 1 ]; then
-        apk add --allow-untrusted --force-overwrite *.apk 2>/dev/null && install_ok=0
+        apk add --allow-untrusted --force-overwrite --force-non-repository *.apk 2>&1 || {
+            echo "[错误] 安装失败"
+            return 1
+        }
     else
-        opkg install --force-overwrite *.ipk 2>/dev/null && install_ok=0
+        opkg install --force-overwrite *.ipk 2>&1 || {
+            echo "[错误] 安装失败"
+            return 1
+        }
     fi
 
-    if [ "$install_ok" -ne 0 ]; then
-        echo "[错误] 安装失败"
-        return 1
-    fi
-
-    echo "[配置] 写入核心更新链接..."
-    setup_adguardhome_links
-
-    echo "[成功] AdGuardHome 安装完成"
-    fix_dependencies
-    restart_luci
-    show_success
+    echo "[界面] LuCI 界面安装完成"
 }
 
 setup_adguardhome_links() {
     local link_file="/usr/share/AdGuardHome/links.txt"
-
-    if [ ! -f "$link_file" ]; then
-        mkdir -p /usr/share/AdGuardHome 2>/dev/null
-    fi
+    mkdir -p /usr/share/AdGuardHome 2>/dev/null
 
     local arch
     arch=$(detect_arch) || return 1
