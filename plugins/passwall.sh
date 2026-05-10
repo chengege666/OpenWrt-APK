@@ -126,27 +126,22 @@ install_passwall_apk() {
         wget -q --timeout=60 -O "${download_dir}/${i18n_file}" "$i18n_url" 2>/dev/null
     fi
 
-    echo "[安装] 正在安装..."
-    cd "$download_dir" || return 1
-    local output
-    output=$(apk add --allow-untrusted --force-overwrite *.apk 2>&1)
-    local ret=$?
+    echo "[依赖] 安装核心运行依赖..."
+    apk add --allow-untrusted xray-core chinadns-ng ipt2socks dns2socks 2>/dev/null
 
-    if [ "$ret" -eq 0 ]; then
+    echo "[安装] 安装 PassWall 管理界面..."
+    cd "$download_dir" || return 1
+    if apk add --allow-untrusted --force-overwrite --force-depends *.apk 2>/dev/null; then
         echo "[成功] PassWall 安装完成"
+        echo "[提示] 部分依赖可能未安装，APK 已强制安装"
+        echo "如需补全依赖: apk add --allow-untrusted xray-core sing-box chinadns-ng"
         fix_dependencies
         restart_luci
         show_success
         return 0
     fi
 
-    if echo "$output" | grep -qi "unsatisfiable"; then
-        echo "[提示] APK 安装因缺少依赖失败"
-        echo "需要手动安装 PassWall 依赖包后再试"
-    else
-        echo "[错误] 安装失败"
-    fi
-
+    echo "[错误] PassWall 安装失败"
     show_passwall_manual
     return 1
 }
