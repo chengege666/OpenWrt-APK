@@ -121,17 +121,12 @@ install_passwall_apk() {
         wget -q --timeout=60 -O "${download_dir}/luci-i18n-passwall-zh-cn.apk" "$i18n_url" 2>/dev/null
     fi
 
-    echo "[依赖] 安装核心运行依赖..."
-    apk add --allow-untrusted xray-core chinadns-ng ipt2socks dns2socks 2>&1 | grep -v "^$"
+    echo "[依赖] 安装 xray-core 运行依赖..."
+    apk add --allow-untrusted xray-core 2>&1 | tail -3
 
     echo "[安装] 安装 PassWall 管理界面..."
     cd "$download_dir" || return 1
-    local apk_output
-    apk_output=$(apk add --allow-untrusted --force-overwrite --force-depends --force-non-repository *.apk 2>&1)
-    local ret=$?
-    echo "$apk_output"
-
-    if [ "$ret" -eq 0 ]; then
+    if apk add --allow-untrusted --force-overwrite --force-non-repository *.apk 2>&1; then
         echo "[成功] PassWall 安装完成"
         echo "[提示] 如需补全依赖: apk add --allow-untrusted xray-core sing-box chinadns-ng"
         fix_dependencies
