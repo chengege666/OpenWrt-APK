@@ -75,6 +75,13 @@ install_adguardhome() {
     echo "[配置] 写入核心更新链接..."
     setup_adguardhome_links
 
+    echo "[修复] 安装 LuCI 兼容层..."
+    if [ "$is_apk" -eq 1 ]; then
+        apk add --allow-untrusted luci-compat 2>&1 | tail -3
+    else
+        opkg install luci-compat 2>&1 | tail -3
+    fi
+
     echo "[成功] AdGuardHome 安装完成"
     fix_dependencies
     restart_luci
