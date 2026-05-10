@@ -8,97 +8,94 @@ install_passwall() {
     echo "================================"
     echo ""
 
-    local openwrt_ver_prefix="23.05-24.10"
-    if [ -f /etc/openwrt_release ]; then
-        . /etc/openwrt_release 2>/dev/null
-        case "$DISTRIB_RELEASE" in
-            25*|snapshot*)
-                openwrt_ver_prefix="25.12+"
-                ;;
-        esac
-    fi
-    echo "[系统] OpenWrt $openwrt_ver_prefix"
+    local arch
+    arch=$(detect_arch) || return 1
+    echo "[架构] $arch"
 
-    local owner="Openwrt-Passwall"
-    local repo="openwrt-passwall"
-    local plugin_name="passwall"
+    . /etc/openwrt_release 2>/dev/null
+    local release_ver
+    release_ver=$(echo "$DISTRIB_RELEASE" | cut -d'.' -f1,2)
+    echo "[系统] $DISTRIB_RELEASE"
 
-    local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || return 1
+    local is_apk=0
+    case "$release_ver" in
+        25.*|snapshot) is_apk=1 ;;
+    esac
 
-    local tag
-    tag=$(get_release_tag "$release_json")
-    echo "[版本] $tag"
-
-    local all_urls
-    all_urls=$(get_download_urls "$release_json")
-
-    local luci_url
-    local i18n_url
-
-    if echo "$openwrt_ver_prefix" | grep -q "25.12"; then
-        luci_url=$(echo "$all_urls" | grep "luci-app-passwall.*\.apk$" | head -1)
-        i18n_url=$(echo "$all_urls" | grep "luci-i18n-passwall-zh-cn.*\.apk$" | head -1)
+    local install_ok=1
+    if [ "$is_apk" -eq 1 ]; then
+        apk update 2>/dev/null
+        apk add --allow-untrusted luci-app-passwall luci-i18n-passwall-zh-cn 2>/dev/null && install_ok=0
     else
-        luci_url=$(echo "$all_urls" | grep "luci-app-passwall.*\.ipk$" | head -1)
-        i18n_url=$(echo "$all_urls" | grep "luci-i18n-passwall-zh-cn.*\.ipk$" | head -1)
+        opkg update 2>/dev/null
+        opkg install luci-app-passwall luci-i18n-passwall-zh-cn 2>/dev/null && install_ok=0
     fi
 
-    if [ -z "$luci_url" ]; then
-        echo "[错误] 未找到 PassWall 安装包"
-        return 1
+    if [ "$install_ok" -eq 0 ]; then
+        echo "[成功] PassWall 安装完成"
+        fix_dependencies
+        restart_luci
+        show_success
+        return
     fi
 
-    local download_dir="${CACHE_DIR}/${plugin_name}"
-    rm -rf "$download_dir"
-    mkdir -p "$download_dir"
+    echo "[重试] 系统软件源中未找到，添加 passwall-build 软件源..."
 
-    local filename
-    filename=$(basename "$luci_url")
-    echo "[下载] $filename"
-    if ! wget -q --timeout=60 -O "${download_dir}/${filename}" "$luci_url" 2>/dev/null; then
-        echo "[错误] 下载失败"
-        rm -f "${download_dir}/${filename}"
-        return 1
-    fi
+    local pw_arch
+    pw_arch=$(echo "$DISTRIB_ARCH" | tr -d ' \n')
 
-    if [ -n "$i18n_url" ]; then
-        local i18n_file
-        i18n_file=$(basename "$i18n_url")
-        echo "[下载] $i18n_file"
-        wget -q --timeout=60 -O "${download_dir}/${i18n_file}" "$i18n_url" 2>/dev/null
-    fi
-
-    echo "[安装] 正在安装..."
-    cd "$download_dir" || return 1
-    case "$filename" in
-        *.apk)
-            if apk add --allow-untrusted --force-overwrite *.apk 2>/dev/null; then
-                echo "[成功] APK 安装完成"
-            else
-                echo "[错误] APK 安装失败"
-                return 1
-            fi
+    local base_url
+    case "$release_ver" in
+        25.*|snapshot)
+            base_url="https://master.dl.sourceforge.net/project/openwrt-passwall-build/snapshots/packages/${pw_arch}"
             ;;
-        *.ipk)
-            if opkg install --force-overwrite *.ipk 2>/dev/null; then
-                echo "[成功] IPK 安装完成"
-            else
-                echo "[错误] IPK 安装失败"
-                return 1
-            fi
+        *)
+            base_url="https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/packages-${release_ver}/${pw_arch}"
             ;;
     esac
 
-    echo "[修复] 修复依赖..."
+    local feed_added=0
+    for feed in passwall_luci passwall_packages; do
+        if wget -q --spider --timeout=10 "${base_url}/${feed}/Packages.gz" 2>/dev/null; then
+            echo "添加: $feed"
+            echo "src/gz $feed ${base_url}/${feed}" >> /etc/opkg/customfeeds.conf 2>/dev/null
+            feed_added=1
+        fi
+    done
+
+    if [ "$feed_added" -eq 0 ]; then
+        echo "[提示] passwall-build 软件源不可用"
+        echo ""
+        echo "================================"
+        echo " 手动安装 PassWall"
+        echo "================================"
+        echo ""
+        echo "添加软件源后执行:"
+        echo "  echo \"src/gz passwall_luci https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/packages-${release_ver}/${pw_arch}/passwall_luci\" >> /etc/opkg/customfeeds.conf"
+        echo "  echo \"src/gz passwall_packages https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/packages-${release_ver}/${pw_arch}/passwall_packages\" >> /etc/opkg/customfeeds.conf"
+        echo "  opkg update"
+        echo "  opkg install luci-app-passwall"
+        echo ""
+        return 1
+    fi
+
+    install_ok=1
+    if [ "$is_apk" -eq 1 ]; then
+        apk update 2>/dev/null
+        apk add --allow-untrusted luci-app-passwall luci-i18n-passwall-zh-cn 2>/dev/null && install_ok=0
+    else
+        opkg update 2>/dev/null
+        opkg install luci-app-passwall luci-i18n-passwall-zh-cn 2>/dev/null && install_ok=0
+    fi
+
+    if [ "$install_ok" -ne 0 ]; then
+        echo "[错误] 安装失败"
+        return 1
+    fi
+
+    echo "[成功] PassWall 安装完成"
     fix_dependencies
-
-    echo "[清理] 清除 LuCI 缓存..."
-    rm -rf /tmp/luci-* 2>/dev/null
-
-    echo "[重启] 重启 LuCI..."
     restart_luci
-
     show_success
 }
 
