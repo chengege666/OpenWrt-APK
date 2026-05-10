@@ -67,7 +67,17 @@ install_adguardhome() {
     restart_luci
 
     echo "[成功] AdGuardHome 安装完成"
-    echo "提示：请在 LuCI 界面将'工作目录'设置为: $AGH_WORK_DIR"
+    echo ""
+    echo "=========================================="
+    echo " 重要提示"
+    echo "=========================================="
+    echo "请在 LuCI 界面将以下设置修改为："
+    echo "  Work dir (工作目录): /etc/AdGuardHome"
+    echo "  Config path (配置路径): /etc/AdGuardHome.yaml"
+    echo "=========================================="
+    echo ""
+    echo "注意：/usr/bin/AdGuardHome 是只读目录，不可用作工作目录！"
+    echo ""
 
     show_success
 }
@@ -85,36 +95,66 @@ install_adguardhome_luci_github() {
     [ "$is_apk" -eq 1 ] && pkg_ext="apk" || pkg_ext="ipk"
 
     local pkg_url
-    pkg_url=$(echo "$all_urls" | grep "luci-app-adguardhome.*\.${pkg_ext}$" | head -1)
+    pkg_url=$(echo "$all_urls" | grep "luci-app-adguardhome.*\.${pkg_ext}$" | grep -iv "i18n" | head -1)
 
     if [ -z "$pkg_url" ]; then
-        echo "[错误] 未找到合适的 LuCI 包"
+        echo "[错误] 未找到合适的 LuCI 主包"
         return 1
     fi
+
+    local i18n_url
+    i18n_url=$(echo "$all_urls" | grep "luci-app-adguardhome.*i18n.*zh-cn.*\.${pkg_ext}$" | head -1)
 
     local download_dir="${CACHE_DIR}/adguardhome"
     mkdir -p "$download_dir"
 
-    echo "[下载] $pkg_url"
-    if wget -q --timeout=60 -O "${download_dir}/luci.pkg" "$pkg_url" 2>/dev/null; then
-        if [ -f "${download_dir}/luci.pkg" ] && [ -s "${download_dir}/luci.pkg" ]; then
-            echo "[成功] 下载完成"
+    echo "[下载] 主包: $pkg_url"
+    if wget -q --timeout=60 -O "${download_dir}/luci-main.pkg" "$pkg_url" 2>/dev/null; then
+        if [ -f "${download_dir}/luci-main.pkg" ] && [ -s "${download_dir}/luci-main.pkg" ]; then
+            echo "[成功] 主包下载完成"
         else
-            echo "[错误] 下载文件为空"
-            rm -f "${download_dir}/luci.pkg"
+            echo "[错误] 主包下载文件为空"
+            rm -f "${download_dir}/luci-main.pkg"
             return 1
         fi
     else
-        echo "[错误] 下载失败"
-        rm -f "${download_dir}/luci.pkg"
+        echo "[错误] 主包下载失败"
+        rm -f "${download_dir}/luci-main.pkg"
         return 1
+    fi
+
+    if [ -n "$i18n_url" ]; then
+        echo "[下载] 中文包: $i18n_url"
+        if wget -q --timeout=60 -O "${download_dir}/luci-i18n.pkg" "$i18n_url" 2>/dev/null; then
+            if [ -f "${download_dir}/luci-i18n.pkg" ] && [ -s "${download_dir}/luci-i18n.pkg" ]; then
+                echo "[成功] 中文包下载完成"
+            else
+                echo "[警告] 中文包下载文件为空，将只安装主包"
+                rm -f "${download_dir}/luci-i18n.pkg"
+                i18n_url=""
+            fi
+        else
+            echo "[警告] 中文包下载失败，将只安装主包"
+            rm -f "${download_dir}/luci-i18n.pkg"
+            i18n_url=""
+        fi
+    else
+        echo "[警告] 未找到中文包，将只安装主包"
     fi
 
     echo "[安装] 正在安装 LuCI 界面..."
     if [ "$is_apk" -eq 1 ]; then
-        apk add --allow-untrusted --force-overwrite "${download_dir}/luci.pkg" 2>/dev/null || return 1
+        if [ -n "$i18n_url" ]; then
+            apk add --allow-untrusted --force-overwrite "${download_dir}/luci-main.pkg" "${download_dir}/luci-i18n.pkg" 2>/dev/null || return 1
+        else
+            apk add --allow-untrusted --force-overwrite "${download_dir}/luci-main.pkg" 2>/dev/null || return 1
+        fi
     else
-        opkg install --force-overwrite "${download_dir}/luci.pkg" 2>/dev/null || return 1
+        if [ -n "$i18n_url" ]; then
+            opkg install --force-overwrite "${download_dir}/luci-main.pkg" "${download_dir}/luci-i18n.pkg" 2>/dev/null || return 1
+        else
+            opkg install --force-overwrite "${download_dir}/luci-main.pkg" 2>/dev/null || return 1
+        fi
     fi
 
     echo "[成功] LuCI 界面安装完成"
