@@ -9,7 +9,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/core/ui.sh"
 
 . "${SCRIPT_DIR}/plugins/openclash.sh"
-. "${SCRIPT_DIR}/plugins/passwall.sh"
 . "${SCRIPT_DIR}/plugins/mosdns.sh"
 . "${SCRIPT_DIR}/plugins/adguardhome.sh"
 . "${SCRIPT_DIR}/plugins/docker.sh"
@@ -75,30 +74,26 @@ install_plugin_menu() {
                 wait_for_enter
                 ;;
             2)
-                install_passwall
-                wait_for_enter
-                ;;
-            3)
                 install_mosdns
                 wait_for_enter
                 ;;
-            4)
+            3)
                 install_adguardhome
                 wait_for_enter
                 ;;
-            5)
+            4)
                 install_docker
                 wait_for_enter
                 ;;
-            6)
+            5)
                 install_luci_theme_aurora
                 wait_for_enter
                 ;;
-            7)
+            6)
                 install_lucky
                 wait_for_enter
                 ;;
-            8)
+            7)
                 install_luci_theme_argon
                 wait_for_enter
                 ;;
@@ -125,30 +120,26 @@ uninstall_menu() {
                 wait_for_enter
                 ;;
             2)
-                uninstall_passwall
-                wait_for_enter
-                ;;
-            3)
                 uninstall_mosdns
                 wait_for_enter
                 ;;
-            4)
+            3)
                 uninstall_adguardhome
                 wait_for_enter
                 ;;
-            5)
+            4)
                 uninstall_docker
                 wait_for_enter
                 ;;
-            6)
+            5)
                 uninstall_luci_theme_aurora
                 wait_for_enter
                 ;;
-            7)
+            6)
                 uninstall_lucky
                 wait_for_enter
                 ;;
-            8)
+            7)
                 uninstall_luci_theme_argon
                 wait_for_enter
                 ;;
@@ -227,7 +218,6 @@ update_all() {
     cleanup_old_cache
 
     update_openclash
-    update_passwall
     update_mosdns
     update_adguardhome
     update_docker
@@ -324,7 +314,7 @@ update_store() {
         cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null || { echo "[错误] core/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 
-    for f in openclash.sh passwall.sh mosdns.sh adguardhome.sh docker.sh luci-theme-aurora.sh lucky.sh luci-theme-argon.sh; do
+    for f in openclash.sh mosdns.sh adguardhome.sh docker.sh luci-theme-aurora.sh lucky.sh luci-theme-argon.sh; do
         cp -f "${tmp_dir}/plugins/${f}" "${SCRIPT_DIR}/plugins/${f}" 2>/dev/null || { echo "[错误] plugins/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 

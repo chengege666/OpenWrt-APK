@@ -40,7 +40,6 @@ download_file "${RAW_URL}/core/github.sh" "${INSTALL_DIR}/core/github.sh" && ech
 download_file "${RAW_URL}/core/install.sh" "${INSTALL_DIR}/core/install.sh" && echo "[下载] core/install.sh" || { echo "[错误] core/install.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/core/ui.sh" "${INSTALL_DIR}/core/ui.sh" && echo "[下载] core/ui.sh" || { echo "[错误] core/ui.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/openclash.sh" "${INSTALL_DIR}/plugins/openclash.sh" && echo "[下载] plugins/openclash.sh" || { echo "[错误] plugins/openclash.sh 下载失败"; exit 1; }
-download_file "${RAW_URL}/plugins/passwall.sh" "${INSTALL_DIR}/plugins/passwall.sh" && echo "[下载] plugins/passwall.sh" || { echo "[错误] plugins/passwall.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/mosdns.sh" "${INSTALL_DIR}/plugins/mosdns.sh" && echo "[下载] plugins/mosdns.sh" || { echo "[错误] plugins/mosdns.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/adguardhome.sh" "${INSTALL_DIR}/plugins/adguardhome.sh" && echo "[下载] plugins/adguardhome.sh" || { echo "[错误] plugins/adguardhome.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/docker.sh" "${INSTALL_DIR}/plugins/docker.sh" && echo "[下载] plugins/docker.sh" || { echo "[错误] plugins/docker.sh 下载失败"; exit 1; }
