@@ -109,7 +109,7 @@ fix_dependencies() {
     esac
 
     if [ "$is_apk" -eq 1 ]; then
-        apk fix --allow-untrusted 2>/dev/null
+        echo "[提示] 跳过自动修复（耗时较长），如有问题请手动执行: apk fix"
     else
         opkg update 2>/dev/null
         opkg install --force-reinstall $(opkg list-installed 2>/dev/null | cut -d' ' -f1) 2>/dev/null
