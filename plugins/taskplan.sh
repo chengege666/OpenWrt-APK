@@ -34,7 +34,7 @@ install_taskplan() {
             all_urls=$(echo "$releases_list" | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p')
             app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
             if [ -n "$app_url" ]; then
-                tag=$(echo "$releases_list" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)
+                tag=$(echo "$app_url" | sed 's|.*/releases/download/||' | sed 's|/.*||')
                 echo "[版本] 回退至 $tag"
             fi
         fi
