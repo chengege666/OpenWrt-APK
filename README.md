@@ -25,7 +25,7 @@ wget -O- https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/install.
 
 ## 短链接
 ```sh
-bash <(curl -sL apk.1231818.xyz)
+bash <(curl -sL https://lj.1231818.xyz/openwrt)
 ```
 ## 手动安装
 
