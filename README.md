@@ -23,6 +23,10 @@ OpenWrt APK 应用商店 - 一键插件安装系统
 wget -O- https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/install.sh | sh
 ```
 
+## 短链接
+```sh
+bash <(curl -sL vpsx.1231818.xyz)
+```
 ## 手动安装
 
 ```sh
