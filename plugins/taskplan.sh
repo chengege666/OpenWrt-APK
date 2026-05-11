@@ -25,13 +25,28 @@ install_taskplan() {
     local app_url
     app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
 
-    local i18n_url
-    i18n_url=$(echo "$all_urls" | grep "luci-i18n-taskplan-zh-cn-" | grep "\.apk$" | head -1)
+    if [ -z "$app_url" ]; then
+        echo "[重试] 当前版本无安装包，尝试获取上一版本..."
+        local api_url="https://api.github.com/repos/${owner}/${repo}/releases"
+        local releases_list
+        releases_list=$(wget -q --timeout=15 -O- "$api_url" 2>/dev/null)
+        if [ -n "$releases_list" ]; then
+            all_urls=$(echo "$releases_list" | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p')
+            app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
+            if [ -n "$app_url" ]; then
+                tag=$(echo "$releases_list" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)
+                echo "[版本] 回退至 $tag"
+            fi
+        fi
+    fi
 
     if [ -z "$app_url" ]; then
         echo "[错误] 未找到 luci-app-taskplan 安装包"
         return 1
     fi
+
+    local i18n_url
+    i18n_url=$(echo "$all_urls" | grep "luci-i18n-taskplan-zh-cn-" | grep "\.apk$" | head -1)
 
     local download_dir="${CACHE_DIR}/${plugin_name}"
     rm -rf "$download_dir"
