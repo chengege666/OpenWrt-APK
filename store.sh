@@ -15,6 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/luci-theme-aurora.sh"
 . "${SCRIPT_DIR}/plugins/lucky.sh"
 . "${SCRIPT_DIR}/plugins/luci-theme-argon.sh"
+. "${SCRIPT_DIR}/plugins/taskplan.sh"
 
 TTY="/dev/tty"
 
@@ -97,6 +98,10 @@ install_plugin_menu() {
                 install_luci_theme_argon
                 wait_for_enter
                 ;;
+            8)
+                install_taskplan
+                wait_for_enter
+                ;;
             0)
                 return
                 ;;
@@ -141,6 +146,10 @@ uninstall_menu() {
                 ;;
             7)
                 uninstall_luci_theme_argon
+                wait_for_enter
+                ;;
+            8)
+                uninstall_taskplan
                 wait_for_enter
                 ;;
             0)
@@ -194,6 +203,10 @@ update_menu() {
                 wait_for_enter
                 ;;
             9)
+                update_taskplan
+                wait_for_enter
+                ;;
+            10)
                 update_all
                 wait_for_enter
                 ;;
