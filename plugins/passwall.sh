@@ -141,6 +141,16 @@ install_passwall() {
 
     echo "[成功] 安装完成"
 
+    if [ -f /etc/init.d/passwall ]; then
+        echo "[注册] 注册 PassWall 服务..."
+        /etc/init.d/passwall enable 2>/dev/null || echo "[警告] 服务注册失败"
+    fi
+
+    if [ -f /etc/init.d/passwall2 ]; then
+        echo "[注册] 注册 PassWall2 服务..."
+        /etc/init.d/passwall2 enable 2>/dev/null || echo "[警告] 服务注册失败"
+    fi
+
     echo "[重启] 重启 LuCI..."
     restart_luci
 
