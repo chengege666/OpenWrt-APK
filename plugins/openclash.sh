@@ -4,7 +4,7 @@
 install_openclash_deps() {
     echo "[依赖] 检查 OpenClash 运行依赖..."
 
-    local common_pkgs="bash dnsmasq-full curl ca-bundle ip-full ruby ruby-yaml kmod-tun kmod-inet-diag unzip luci-compat luci luci-base"
+    local common_pkgs="bash dnsmasq-full curl ca-bundle ip-full ruby ruby-yaml kmod-tun kmod-inet-diag kmod-nft-tproxy unzip luci-compat luci luci-base"
 
     echo "[依赖] 安装基础依赖..."
     apk add --allow-untrusted $common_pkgs 2>/dev/null
@@ -13,8 +13,7 @@ install_openclash_deps() {
     firewall=$(uci get firewall.@defaults[0].fw4_forward 2>/dev/null && echo "nftables" || echo "iptables")
 
     if [ "$firewall" = "nftables" ]; then
-        echo "[依赖] 检测到 nftables 防火墙，安装 nftables 模块..."
-        apk add --allow-untrusted kmod-nft-tproxy 2>/dev/null
+        echo "[依赖] 检测到 nftables 防火墙..."
         if modprobe nft_tproxy 2>/dev/null; then
             echo "[依赖] nft_tproxy 模块已加载"
             echo "nft_tproxy" >> /etc/modules.d/nft-tproxy.conf 2>/dev/null
