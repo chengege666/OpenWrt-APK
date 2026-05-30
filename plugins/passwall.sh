@@ -32,6 +32,8 @@ install_passwall() {
     ver_tag_esc=$(echo "$ver_tag" | sed 's/\+/\\+/g')
     echo "[系统] OpenWrt $release_ver ($ver_tag)"
 
+    rm -f /etc/apk/repositories.d/passwall.list 2>/dev/null
+
     local download_dir="${CACHE_DIR}/passwall"
     rm -rf "$download_dir"
     mkdir -p "$download_dir"
@@ -193,12 +195,32 @@ install_passwall() {
         if apk add --allow-untrusted --force-overwrite "${download_dir}/${luci_file}" 2>/dev/null; then
             echo "[成功] LuCI 主程序安装完成"
             install_ok=1
+        else
+            echo "[安装] 缺少依赖，尝试从软件源安装..."
+            local missing_deps="dns2socks chinadns-ng tcping microsocks ipt2socks"
+            for pkg in $missing_deps; do
+                apk add --allow-untrusted "$pkg" 2>/dev/null && echo "[安装] $pkg 完成" || true
+            done
+            if apk add --allow-untrusted --force-overwrite "${download_dir}/${luci_file}" 2>/dev/null; then
+                echo "[成功] LuCI 主程序安装完成"
+                install_ok=1
+            fi
         fi
     else
         echo "[安装] 安装 LuCI 主程序..."
         if opkg install --force-overwrite "${download_dir}/${luci_file}" 2>/dev/null; then
             echo "[成功] LuCI 主程序安装完成"
             install_ok=1
+        else
+            echo "[安装] 缺少依赖，尝试从软件源安装..."
+            local missing_deps="dns2socks chinadns-ng tcping microsocks ipt2socks"
+            for pkg in $missing_deps; do
+                opkg install "$pkg" 2>/dev/null && echo "[安装] $pkg 完成" || true
+            done
+            if opkg install --force-overwrite "${download_dir}/${luci_file}" 2>/dev/null; then
+                echo "[成功] LuCI 主程序安装完成"
+                install_ok=1
+            fi
         fi
     fi
 
