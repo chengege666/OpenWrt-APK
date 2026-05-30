@@ -32,38 +32,35 @@ install_passwall() {
     ver_tag_esc=$(echo "$ver_tag" | sed 's/\+/\\+/g')
     echo "[系统] OpenWrt $release_ver ($ver_tag)"
 
-    local owner="Openwrt-Passwall"
-    local repo="openwrt-passwall"
-    local plugin_name="passwall"
-
-    local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || return 1
-
-    local tag
-    tag=$(get_release_tag "$release_json")
-    echo "[版本] $tag"
-
-    local all_urls
-    all_urls=$(get_download_urls "$release_json")
-
-    local download_dir="${CACHE_DIR}/${plugin_name}"
+    local download_dir="${CACHE_DIR}/passwall"
     rm -rf "$download_dir"
     mkdir -p "$download_dir"
 
-    echo "[步骤 1/2] 下载 PassWall LuCI 界面..."
+    echo "[步骤 1/3] 下载 PassWall LuCI 界面..."
+
+    local luci_release_json
+    luci_release_json=$(get_latest_release "Openwrt-Passwall" "openwrt-passwall") || return 1
+
+    local luci_tag
+    luci_tag=$(get_release_tag "$luci_release_json")
+    echo "[版本] $luci_tag"
+
+    local luci_all_urls
+    luci_all_urls=$(get_download_urls "$luci_release_json")
+
     local pkg_ext
     [ "$is_apk" -eq 1 ] && pkg_ext="apk" || pkg_ext="ipk"
 
     local luci_url
-    luci_url=$(echo "$all_urls" | grep "${ver_tag_esc}" | grep "luci-app-passwall" | grep "\.${pkg_ext}$" | head -1)
+    luci_url=$(echo "$luci_all_urls" | grep "${ver_tag_esc}" | grep "luci-app-passwall" | grep "\.${pkg_ext}$" | head -1)
 
     if [ -z "$luci_url" ]; then
         echo "[重试] 未找到匹配版本，尝试通用匹配..."
-        luci_url=$(echo "$all_urls" | grep "luci-app-passwall" | grep "\.${pkg_ext}$" | head -1)
+        luci_url=$(echo "$luci_all_urls" | grep "luci-app-passwall" | grep "\.${pkg_ext}$" | head -1)
     fi
 
     if [ -z "$luci_url" ]; then
-        luci_url=$(echo "$all_urls" | grep "luci-app-passwall" | head -1)
+        luci_url=$(echo "$luci_all_urls" | grep "luci-app-passwall" | head -1)
     fi
 
     if [ -z "$luci_url" ]; then
@@ -71,9 +68,9 @@ install_passwall() {
         return 1
     fi
 
-    echo "[下载] $luci_url"
     local luci_name
     luci_name=$(basename "$luci_url")
+    echo "[下载] $luci_name"
     if ! wget -q --timeout=120 -O "${download_dir}/${luci_name}" "$luci_url" 2>/dev/null; then
         echo "[错误] 下载失败: $luci_name"
         rm -f "${download_dir}/${luci_name}"
@@ -87,14 +84,14 @@ install_passwall() {
     fi
     echo "[成功] LuCI 下载完成"
 
-    echo "[步骤 2/2] 下载 PassWall 中文语言包..."
+    echo "[步骤 2/3] 下载 PassWall 中文语言包..."
     local i18n_name=""
     local i18n_url
-    i18n_url=$(echo "$all_urls" | grep "${ver_tag_esc}" | grep "luci-i18n-passwall-zh-cn" | grep "\.${pkg_ext}$" | head -1)
+    i18n_url=$(echo "$luci_all_urls" | grep "${ver_tag_esc}" | grep "luci-i18n-passwall-zh-cn" | grep "\.${pkg_ext}$" | head -1)
 
     if [ -z "$i18n_url" ]; then
         echo "[重试] 未找到匹配版本中文包，尝试通用匹配..."
-        i18n_url=$(echo "$all_urls" | grep "luci-i18n-passwall-zh-cn" | grep "\.${pkg_ext}$" | head -1)
+        i18n_url=$(echo "$luci_all_urls" | grep "luci-i18n-passwall-zh-cn" | grep "\.${pkg_ext}$" | head -1)
     fi
 
     if [ -n "$i18n_url" ]; then
@@ -114,78 +111,125 @@ install_passwall() {
         echo "[提示] 未找到中文语言包，将只安装主程序"
     fi
 
+    echo "[步骤 3/3] 下载依赖包..."
+    local deps_release_json
+    deps_release_json=$(get_latest_release "Openwrt-Passwall" "openwrt-passwall2") || {
+        echo "[错误] 获取依赖包信息失败"
+        return 1
+    }
+
+    local deps_all_urls
+    deps_all_urls=$(get_download_urls "$deps_release_json")
+
+    local pkg_zip_url
+    local zip_prefix="passwall_packages_apk"
+    [ "$is_apk" -eq 0 ] && zip_prefix="passwall_packages_ipk"
+
+    pkg_zip_url=$(echo "$deps_all_urls" | grep "${zip_prefix}_${arch}\.zip$" | head -1)
+
+    if [ -z "$pkg_zip_url" ]; then
+        pkg_zip_url=$(echo "$deps_all_urls" | grep "${zip_prefix}_" | grep "${arch}" | grep "\.zip$" | head -1)
+    fi
+
+    if [ -z "$pkg_zip_url" ]; then
+        echo "[错误] 未找到匹配架构 ${arch} 的依赖包"
+        echo "[提示] 可直接安装 LuCI 主程序，依赖可能来自系统源："
+        echo "        apk add --allow-untrusted ${download_dir}/$(basename "$luci_url" | sed 's/%2B/+/g')"
+        pkg_zip_url=""
+    fi
+
+    if [ -n "$pkg_zip_url" ]; then
+        local zip_name
+        zip_name=$(basename "$pkg_zip_url")
+        echo "[下载] $zip_name"
+        if ! wget -q --timeout=180 -O "${download_dir}/${zip_name}" "$pkg_zip_url" 2>/dev/null; then
+            echo "[警告] 依赖包下载失败，尝试直接安装 LuCI..."
+            pkg_zip_url=""
+        elif [ ! -s "${download_dir}/${zip_name}" ]; then
+            echo "[警告] 依赖包文件为空，尝试直接安装 LuCI..."
+            rm -f "${download_dir}/${zip_name}"
+            pkg_zip_url=""
+        else
+            echo "[成功] 依赖包下载完成"
+        fi
+    fi
+
     echo "[安装] 安装 PassWall..."
+
+    if [ -n "$pkg_zip_url" ] && [ -f "${download_dir}/${zip_name}" ]; then
+        echo "[解压] 正在解压依赖包..."
+        if unzip -o -q "${download_dir}/${zip_name}" -d "${download_dir}/packages" 2>/dev/null; then
+            echo "[成功] 解压完成"
+            rm -f "${download_dir}/${zip_name}"
+
+            local pkg_files
+            pkg_files=$(find "${download_dir}/packages" -name "*.${pkg_ext}" 2>/dev/null)
+            if [ -n "$pkg_files" ]; then
+                local pkg_count
+                pkg_count=$(echo "$pkg_files" | wc -l)
+                echo "[安装] 安装 $pkg_count 个依赖包..."
+
+                if [ "$is_apk" -eq 1 ]; then
+                    apk add --allow-untrusted --force-overwrite $pkg_files 2>/dev/null || echo "[警告] 部分依赖包安装失败"
+                else
+                    opkg install --force-overwrite $pkg_files 2>/dev/null || echo "[警告] 部分依赖包安装失败"
+                fi
+            fi
+        else
+            echo "[警告] 解压失败，尝试直接安装 LuCI..."
+        fi
+    fi
+
     local install_ok=0
+    local luci_file
+    luci_file=$(basename "$luci_url" | sed 's/%2B/+/g')
+
+    if [ "$luci_file" != "$(basename "$luci_url")" ]; then
+        mv -f "${download_dir}/$(basename "$luci_url")" "${download_dir}/${luci_file}" 2>/dev/null
+    fi
 
     if [ "$is_apk" -eq 1 ]; then
         echo "[安装] 安装 LuCI 主程序..."
-
-        local luci_file
-        luci_file=$(basename "$luci_url" | sed 's/%2B/+/g')
-        if [ "$luci_file" != "$(basename "$luci_url")" ]; then
-            mv -f "${download_dir}/$(basename "$luci_url")" "${download_dir}/${luci_file}" 2>/dev/null
-        fi
-
         if apk add --allow-untrusted --force-overwrite "${download_dir}/${luci_file}" 2>/dev/null; then
             echo "[成功] LuCI 主程序安装完成"
             install_ok=1
-        else
-            echo "[警告] 直接安装失败，尝试添加软件源后重试..."
-            local passwall_repo="https://sourceforge.net/projects/openwrt-passwall-build/files/snapshots/packages"
-            local arch_apk
-            arch_apk=$(uname -m)
-            echo "src/gz passwall_build ${passwall_repo}/${arch_apk}/passwall_packages" >> /etc/apk/repositories.d/passwall.list 2>/dev/null
-            apk update 2>/dev/null
-            if apk add --allow-untrusted --force-overwrite "${download_dir}/${luci_file}" 2>/dev/null; then
-                echo "[成功] LuCI 主程序安装完成"
-                install_ok=1
-            fi
-        fi
-
-        if [ -n "$i18n_name" ] && [ -f "${download_dir}/${i18n_name}" ]; then
-            echo "[安装] 安装中文包..."
-            local i18n_file
-            i18n_file=$(echo "$i18n_name" | sed 's/%2B/+/g')
-            if [ "$i18n_file" != "$i18n_name" ]; then
-                mv -f "${download_dir}/${i18n_name}" "${download_dir}/${i18n_file}" 2>/dev/null
-            fi
-            apk add --allow-untrusted --force-overwrite "${download_dir}/${i18n_file}" 2>/dev/null && echo "[成功] 中文包安装完成"
         fi
     else
         echo "[安装] 安装 LuCI 主程序..."
-        local luci_file
-        luci_file=$(basename "$luci_url" | sed 's/%2B/+/g')
-        if [ "$luci_file" != "$(basename "$luci_url")" ]; then
-            mv -f "${download_dir}/$(basename "$luci_url")" "${download_dir}/${luci_file}" 2>/dev/null
-        fi
-
         if opkg install --force-overwrite "${download_dir}/${luci_file}" 2>/dev/null; then
             echo "[成功] LuCI 主程序安装完成"
             install_ok=1
         fi
+    fi
 
-        if [ -n "$i18n_name" ] && [ -f "${download_dir}/${i18n_name}" ]; then
-            echo "[安装] 安装中文包..."
-            local i18n_file
-            i18n_file=$(echo "$i18n_name" | sed 's/%2B/+/g')
-            if [ "$i18n_file" != "$i18n_name" ]; then
-                mv -f "${download_dir}/${i18n_name}" "${download_dir}/${i18n_file}" 2>/dev/null
-            fi
+    if [ "$install_ok" -eq 1 ] && [ -n "$i18n_name" ] && [ -f "${download_dir}/${i18n_name}" ]; then
+        echo "[安装] 安装中文包..."
+        local i18n_file
+        i18n_file=$(echo "$i18n_name" | sed 's/%2B/+/g')
+        if [ "$i18n_file" != "$i18n_name" ]; then
+            mv -f "${download_dir}/${i18n_name}" "${download_dir}/${i18n_file}" 2>/dev/null
+        fi
+
+        if [ "$is_apk" -eq 1 ]; then
+            apk add --allow-untrusted --force-overwrite "${download_dir}/${i18n_file}" 2>/dev/null && echo "[成功] 中文包安装完成"
+        else
             opkg install --force-overwrite "${download_dir}/${i18n_file}" 2>/dev/null && echo "[成功] 中文包安装完成"
         fi
     fi
 
     if [ "$install_ok" -eq 0 ]; then
         echo "[错误] 安装失败"
-        echo "[提示] 可能是缺少依赖，请手动执行以下命令查看详细错误："
-        echo "    apk add --allow-untrusted ${download_dir}/${luci_file}"
+        echo "[提示] 手动安装命令："
+        echo "  apk add --allow-untrusted --force-overwrite ${download_dir}/${luci_file}"
         return 1
     fi
 
     echo "[成功] PassWall 安装完成"
 
-    echo "[修复] 修复依赖..."
-    fix_dependencies
+    if [ "$is_apk" -eq 0 ]; then
+        echo "[修复] 修复依赖..."
+        fix_dependencies
+    fi
 
     echo "[重启] 重启 LuCI..."
     restart_luci
