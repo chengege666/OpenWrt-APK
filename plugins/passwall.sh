@@ -29,7 +29,7 @@ install_passwall() {
         ver_tag="23.05-24.10"
     fi
     local ver_tag_esc
-    ver_tag_esc=$(echo "$ver_tag" | sed 's/\+/\\+/g')
+    ver_tag_esc=$(echo "$ver_tag" | sed 's/+/\\+/g')
     echo "[系统] OpenWrt $release_ver ($ver_tag)"
 
     rm -f /etc/apk/repositories.d/passwall.list 2>/dev/null
@@ -201,9 +201,14 @@ install_passwall() {
             for pkg in $missing_deps; do
                 apk add --allow-untrusted "$pkg" 2>/dev/null && echo "[安装] $pkg 完成" || true
             done
-            if apk add --allow-untrusted --force-overwrite "${download_dir}/${luci_file}" 2>/dev/null; then
+            echo "[安装] 依赖安装完毕，重试安装 LuCI..."
+            local install_err
+            install_err=$(apk add --allow-untrusted --force-overwrite "${download_dir}/${luci_file}" 2>&1)
+            if [ $? -eq 0 ]; then
                 echo "[成功] LuCI 主程序安装完成"
                 install_ok=1
+            else
+                echo "[错误] $install_err"
             fi
         fi
     else
