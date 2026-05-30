@@ -70,9 +70,9 @@ show_uninstall_menu() {
     echo "8.  卸载 TaskPlan"
     echo "9.  卸载 PassWall2"
     echo "10. 卸载 SmartDNS"
-    echo "0. 返回上级"
+    echo "0.  返回上级"
     echo ""
-}
+}1
 
 show_update_menu() {
     echo "================================"
