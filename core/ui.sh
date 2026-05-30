@@ -90,7 +90,7 @@ show_update_menu() {
     echo "9.  更新 PassWall2"
     echo "10. 更新 SmartDNS"
     echo "11. 更新全部"
-    echo "0. 返回上级"
+    echo "0.  返回上级"
     echo ""
 }
 
