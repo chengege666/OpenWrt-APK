@@ -91,13 +91,21 @@ install_daed() {
         return 1
     fi
 
+    echo "[依赖] 尝试安装 vmlinux-btf..."
+    apk add --allow-untrusted vmlinux-btf 2>/dev/null || echo "[提示] vmlinux-btf 不可用，将跳过依赖检查"
+
     echo "[安装] 正在安装..."
     if cd "$download_dir" && apk add --allow-untrusted --force-overwrite --clean-protected *.apk 2>/dev/null; then
         echo "[成功] APK 安装完成"
     else
-        echo "[错误] APK 安装失败"
-        cd /
-        return 1
+        echo "[重试] 完整安装失败，尝试跳过依赖检查..."
+        if cd "$download_dir" && apk add --allow-untrusted --force-overwrite --clean-protected --no-deps *.apk 2>/dev/null; then
+            echo "[成功] APK 安装完成（跳过依赖）"
+        else
+            echo "[错误] APK 安装失败"
+            cd /
+            return 1
+        fi
     fi
 
     echo "[修复] 修复依赖..."
