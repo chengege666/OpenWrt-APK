@@ -14,7 +14,9 @@ OpenWrt APK 应用商店 - 一键插件安装系统
 - 自动修复依赖
 - 自动重启 LuCI
 - 插件卸载
-- 插件更新
+- 插件更新（支持一键更新全部）
+- 一键配置启动快捷键
+- 自动更新脚本
 - 支持管道安装（wget -O- | sh）
 
 ## 一键安装
@@ -49,12 +51,15 @@ OpenWrt-APK/
 │   └── ui.sh             # 用户界面模块
 └── plugins/
     ├── openclash.sh      # OpenClash 插件
-    ├── passwall.sh       # PassWall 插件
+    ├── passwall2.sh      # PassWall2 插件
     ├── mosdns.sh         # MosDNS 插件
     ├── adguardhome.sh    # AdGuardHome 插件
     ├── docker.sh         # Docker 插件
-    ├── ddns.sh           # DDNS 插件
-    └── tailscale.sh      # Tailscale 插件
+    ├── smartdns.sh       # SmartDNS 插件
+    ├── lucky.sh          # Lucky 插件
+    ├── taskplan.sh       # TaskPlan 插件
+    ├── luci-theme-argon.sh    # Argon 主题插件
+    └── luci-theme-aurora.sh   # Aurora 主题插件
 ```
 
 ## 支持的插件
@@ -62,12 +67,15 @@ OpenWrt-APK/
 | 插件 | 说明 |
 |------|------|
 | OpenClash | 透明代理工具 |
-| PassWall | 科学上网插件 |
+| PassWall2 | 科学上网插件 |
 | MosDNS | DNS 分流解析 |
 | AdGuardHome | 广告过滤 |
 | Docker | 容器管理 |
-| DDNS | 动态域名解析 |
-| Tailscale | 虚拟组网 |
+| SmartDNS | DNS 本地加速 |
+| Lucky | 综合网络工具（DDNS/Stun/Webhook） |
+| TaskPlan | 定时任务管理 |
+| luci-theme-argon | Argon 主题美化 |
+| luci-theme-aurora | Aurora 主题美化 |
 
 ## 使用方式
 
@@ -78,18 +86,33 @@ OpenWrt-APK/
  OpenWrt APK Store
 ================================
 
-1. OpenClash
-2. PassWall
-3. MosDNS
-4. AdGuardHome
-5. Docker
-6. DDNS
-7. Tailscale
-8. 卸载插件
-9. 更新插件
-0. 退出
+1.   安装插件
+2.   卸载插件
+3.   更新插件
+4.   一键配置启动快捷键
+00.  卸载脚本
+000. 更新脚本
+0.   退出
+```
 
-请选择:
+选择 **安装插件** 后进入子菜单：
+
+```
+================================
+ 安装插件
+================================
+
+1.   OpenClash
+2.   MosDNS
+3.   AdGuardHome
+4.   Docker
+5.   Aurora 主题
+6.   Lucky
+7.   Argon 主题
+8.   TaskPlan 定时任务
+9.   PassWall2
+10.  SmartDNS
+0.   返回上级
 ```
 
 ## 添加新插件
