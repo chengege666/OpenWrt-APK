@@ -83,6 +83,9 @@ install_adguardhome() {
 
     echo "[成功] 安装完成"
 
+    echo "[配置] 配置核心下载链接..."
+    setup_adguardhome_links
+
     echo "[修复] 修复依赖..."
     fix_dependencies
 
@@ -90,6 +93,20 @@ install_adguardhome() {
     restart_luci
 
     show_success
+}
+
+setup_adguardhome_links() {
+    mkdir -p /usr/share/AdGuardHome
+
+    local link_file="/usr/share/AdGuardHome/links.txt"
+
+    cat <<EOF > "$link_file"
+https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_linux_amd64.tar.gz
+https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_linux_arm64.tar.gz
+https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_linux_armv7.tar.gz
+https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_linux_mipsle_softfloat.tar.gz
+https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_linux_mips_softfloat.tar.gz
+EOF
 }
 
 uninstall_adguardhome() {
