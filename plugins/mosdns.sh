@@ -54,31 +54,25 @@ install_mosdns() {
         return 1
     fi
 
-    local download_dir="${CACHE_DIR}/${plugin_name}"
-    rm -rf "$download_dir"
-    mkdir -p "$download_dir"
-
     local tarball_name
     tarball_name=$(basename "$tarball_url")
 
-    echo "[下载] $tarball_name"
-    if ! wget -q --timeout=60 -O "${download_dir}/${tarball_name}" "$tarball_url" 2>/dev/null; then
+    if ! download_file "$tarball_url" "${CACHE_DIR}/${plugin_name}/${tarball_name}"; then
         echo "[错误] 下载失败"
-        rm -f "${download_dir}/${tarball_name}"
         return 1
     fi
 
     echo "[解压] 正在解压..."
-    if ! tar xzf "${download_dir}/${tarball_name}" -C "$download_dir" 2>/dev/null; then
+    if ! tar xzf "${CACHE_DIR}/${plugin_name}/${tarball_name}" -C "${CACHE_DIR}/${plugin_name}" 2>/dev/null; then
         echo "[错误] 解压失败"
-        rm -f "${download_dir}/${tarball_name}"
+        rm -f "${CACHE_DIR}/${plugin_name}/${tarball_name}"
         return 1
     fi
 
-    rm -f "${download_dir}/${tarball_name}"
+    rm -f "${CACHE_DIR}/${plugin_name}/${tarball_name}"
 
     local apk_files
-    apk_files=$(find "$download_dir" -name "*.apk" 2>/dev/null)
+    apk_files=$(find "${CACHE_DIR}/${plugin_name}" -name "*.apk" 2>/dev/null)
 
     if [ -z "$apk_files" ]; then
         echo "[错误] 未找到 APK 文件"

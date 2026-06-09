@@ -51,9 +51,8 @@ install_smartdns() {
     fi
 
     echo "[下载] SmartDNS 核心..."
-    if ! wget -q --timeout=120 -O "${download_dir}/smartdns" "$core_url" 2>/dev/null; then
+    if ! download_file "$core_url" "${download_dir}/smartdns"; then
         echo "[错误] 核心下载失败"
-        rm -f "${download_dir}/smartdns"
         return 1
     fi
 
@@ -99,13 +98,11 @@ install_smartdns() {
         return 1
     fi
 
-    echo "[下载] $luci_url"
     local luci_file
     luci_file=$(basename "$luci_url")
-    if ! wget -q --timeout=120 -O "${download_dir}/${luci_file}" "$luci_url" 2>/dev/null; then
+    if ! download_file "$luci_url" "${download_dir}/${luci_file}"; then
         echo "[错误] LuCI 界面下载失败"
         rm -f "${download_dir}/smartdns"
-        rm -f "${download_dir}/${luci_file}"
         return 1
     fi
 

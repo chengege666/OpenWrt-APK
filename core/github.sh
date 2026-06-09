@@ -1,6 +1,26 @@
 #!/bin/sh
 # core/github.sh - GitHub Releases API 模块
 
+# 内部函数：通过镜像获取 GitHub API 响应
+_fetch_github_api() {
+    local url="$1"
+    local desc="$2"
+
+    # 有镜像则走镜像
+    if [ -n "$GITHUB_MIRROR" ]; then
+        local proxied_url="${GITHUB_MIRROR%/}/${url}"
+        local response
+        response=$(wget -q --timeout=15 -O- "$proxied_url" 2>/dev/null)
+        if [ -n "$response" ]; then
+            echo "$response"
+            return 0
+        fi
+        echo "[警告] 镜像 API 请求失败，尝试直连..."
+    fi
+
+    wget -q --timeout=15 -O- "$url" 2>/dev/null
+}
+
 get_latest_release() {
     local owner="$1"
     local repo="$2"
@@ -12,8 +32,7 @@ get_latest_release() {
 
     local api_url="https://api.github.com/repos/${owner}/${repo}/releases/latest"
     local response
-
-    response=$(wget -q --timeout=15 -O- "$api_url" 2>/dev/null)
+    response=$(_fetch_github_api "$api_url" "Releases: $owner/$repo")
 
     if [ -z "$response" ]; then
         echo "[错误] 无法获取 GitHub Releases: $owner/$repo"
@@ -35,8 +54,7 @@ get_latest_commit_sha() {
 
     local api_url="https://api.github.com/repos/${owner}/${repo}/commits/${branch}"
     local response
-
-    response=$(wget -q --timeout=15 -O- "$api_url" 2>/dev/null)
+    response=$(_fetch_github_api "$api_url" "Commits: $owner/$repo")
 
     if [ -z "$response" ]; then
         echo "[错误] 无法获取最新提交: $owner/$repo"

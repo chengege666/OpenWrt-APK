@@ -54,28 +54,14 @@ install_openclash() {
 
     local apk_url
     apk_url="https://github.com/${owner}/${repo}/releases/download/${tag}/luci-app-openclash-${tag#v}.apk"
-    echo "[下载] $apk_url"
 
-    local download_dir="${CACHE_DIR}/${plugin_name}"
-    mkdir -p "$download_dir"
-
-    local output="${download_dir}/luci-app-openclash.apk"
-    if wget -q --timeout=60 -O "$output" "$apk_url" 2>/dev/null; then
-        if [ -f "$output" ] && [ -s "$output" ]; then
-            echo "[成功] 下载完成"
-        else
-            echo "[错误] 下载文件为空"
-            rm -f "$output"
-            return 1
-        fi
-    else
+    if ! download_file "$apk_url" "${CACHE_DIR}/${plugin_name}/luci-app-openclash.apk"; then
         echo "[错误] 下载失败"
-        rm -f "$output"
         return 1
     fi
 
     echo "[安装] 正在安装..."
-    cd "$download_dir" || return 1
+    cd "${CACHE_DIR}/${plugin_name}" || return 1
     if apk add --allow-untrusted --force-overwrite --clean-protected *.apk 2>/dev/null; then
         echo "[成功] APK 安装完成"
     else

@@ -101,19 +101,9 @@ install_adguardhome_core_github() {
     local download_dir="${CACHE_DIR}/adguardhome/core"
     mkdir -p "$download_dir"
 
-    echo "[下载] $download_url"
     local tar_file="${download_dir}/AdGuardHome.tar.gz"
-    if wget -q --timeout=120 -O "$tar_file" "$download_url" 2>/dev/null; then
-        if [ -f "$tar_file" ] && [ -s "$tar_file" ]; then
-            echo "[成功] 下载完成"
-        else
-            echo "[错误] 下载文件为空"
-            rm -f "$tar_file"
-            return 1
-        fi
-    else
+    if ! download_file "$download_url" "$tar_file"; then
         echo "[错误] 下载失败"
-        rm -f "$tar_file"
         return 1
     fi
 
@@ -200,7 +190,7 @@ install_adguardhome_luci_github() {
     echo "[下载] 正在获取 LuCI 界面 ${tag}..."
 
     local release_json
-    release_json=$(wget -q --timeout=30 -O- "$release_url" 2>/dev/null) || {
+    release_json=$(_fetch_github_api "$release_url" "LuCI AdGuardHome: $tag") || {
         echo "[错误] 获取 Release 信息失败: $tag"
         return 1
     }
@@ -224,34 +214,14 @@ install_adguardhome_luci_github() {
     local download_dir="${CACHE_DIR}/adguardhome"
     mkdir -p "$download_dir"
 
-    echo "[下载] 主包: $pkg_url"
-    if wget -q --timeout=60 -O "${download_dir}/luci-main.pkg" "$pkg_url" 2>/dev/null; then
-        if [ -f "${download_dir}/luci-main.pkg" ] && [ -s "${download_dir}/luci-main.pkg" ]; then
-            echo "[成功] 主包下载完成"
-        else
-            echo "[错误] 主包下载文件为空"
-            rm -f "${download_dir}/luci-main.pkg"
-            return 1
-        fi
-    else
+    if ! download_file "$pkg_url" "${download_dir}/luci-main.pkg"; then
         echo "[错误] 主包下载失败"
-        rm -f "${download_dir}/luci-main.pkg"
         return 1
     fi
 
     if [ -n "$i18n_url" ]; then
-        echo "[下载] 中文包: $i18n_url"
-        if wget -q --timeout=60 -O "${download_dir}/luci-i18n.pkg" "$i18n_url" 2>/dev/null; then
-            if [ -f "${download_dir}/luci-i18n.pkg" ] && [ -s "${download_dir}/luci-i18n.pkg" ]; then
-                echo "[成功] 中文包下载完成"
-            else
-                echo "[警告] 中文包下载文件为空，将只安装主包"
-                rm -f "${download_dir}/luci-i18n.pkg"
-                i18n_url=""
-            fi
-        else
+        if ! download_file "$i18n_url" "${download_dir}/luci-i18n.pkg"; then
             echo "[警告] 中文包下载失败，将只安装主包"
-            rm -f "${download_dir}/luci-i18n.pkg"
             i18n_url=""
         fi
     else

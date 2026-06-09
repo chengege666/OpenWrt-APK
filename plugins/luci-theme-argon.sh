@@ -30,21 +30,16 @@ install_luci_theme_argon() {
         return 1
     fi
 
-    local download_dir="${CACHE_DIR}/${plugin_name}"
-    mkdir -p "$download_dir"
-
     local filename
     filename=$(basename "$apk_url")
 
-    echo "[下载] $filename"
-    if ! wget -q --timeout=60 -O "${download_dir}/${filename}" "$apk_url" 2>/dev/null; then
+    if ! download_file "$apk_url" "${CACHE_DIR}/${plugin_name}/${filename}"; then
         echo "[错误] 下载失败"
-        rm -f "${download_dir}/${filename}"
         return 1
     fi
 
     echo "[安装] 正在安装..."
-    cd "$download_dir" || return 1
+    cd "${CACHE_DIR}/${plugin_name}" || return 1
     if apk add --allow-untrusted --force-overwrite *.apk 2>/dev/null; then
         echo "[成功] APK 安装完成"
     else

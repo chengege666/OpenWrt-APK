@@ -29,7 +29,7 @@ install_taskplan() {
         echo "[重试] 当前版本无安装包，尝试获取上一版本..."
         local api_url="https://api.github.com/repos/${owner}/${repo}/releases"
         local releases_list
-        releases_list=$(wget -q --timeout=15 -O- "$api_url" 2>/dev/null)
+        releases_list=$(_fetch_github_api "$api_url" "Releases list: $owner/$repo")
         if [ -n "$releases_list" ]; then
             all_urls=$(echo "$releases_list" | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p')
             app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
@@ -48,32 +48,25 @@ install_taskplan() {
     local i18n_url
     i18n_url=$(echo "$all_urls" | grep "luci-i18n-taskplan-zh-cn-" | grep "\.apk$" | head -1)
 
-    local download_dir="${CACHE_DIR}/${plugin_name}"
-    rm -rf "$download_dir"
-    mkdir -p "$download_dir"
-
     local apk_files=""
 
     if [ -n "$app_url" ]; then
         local app_name
         app_name=$(basename "$app_url")
-        echo "[下载] $app_name"
-        if ! wget -q --timeout=60 -O "${download_dir}/${app_name}" "$app_url" 2>/dev/null; then
+        if ! download_file "$app_url" "${CACHE_DIR}/${plugin_name}/${app_name}"; then
             echo "[错误] 下载失败: $app_name"
-            rm -f "${download_dir}/${app_name}"
             return 1
         fi
-        apk_files="$apk_files ${download_dir}/${app_name}"
+        apk_files="$apk_files ${CACHE_DIR}/${plugin_name}/${app_name}"
     fi
 
     if [ -n "$i18n_url" ]; then
         local i18n_name
         i18n_name=$(basename "$i18n_url")
-        echo "[下载] $i18n_name"
-        if ! wget -q --timeout=60 -O "${download_dir}/${i18n_name}" "$i18n_url" 2>/dev/null; then
+        if ! download_file "$i18n_url" "${CACHE_DIR}/${plugin_name}/${i18n_name}"; then
             echo "[警告] 中文包下载失败，仅安装主程序"
         else
-            apk_files="$apk_files ${download_dir}/${i18n_name}"
+            apk_files="$apk_files ${CACHE_DIR}/${plugin_name}/${i18n_name}"
         fi
     fi
 

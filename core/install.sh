@@ -42,22 +42,18 @@ download_apks() {
         return 1
     fi
 
-    local download_dir="${CACHE_DIR}/${cache_subdir}"
-    mkdir -p "$download_dir"
-
     echo "$urls" | while IFS= read -r url; do
         if [ -n "$url" ]; then
             local filename
             filename=$(basename "$url")
-            local output="${download_dir}/${filename}"
+            local output="${CACHE_DIR}/${cache_subdir}/${filename}"
 
             if [ -f "$output" ] && [ -s "$output" ]; then
                 echo "[跳过] 已存在: $filename"
                 continue
             fi
 
-            wget -q --timeout=30 -O "$output" "$url" 2>/dev/null
-            if [ -f "$output" ] && [ -s "$output" ]; then
+            if download_file "$url" "$output"; then
                 echo "[下载] $filename"
             else
                 echo "[失败] $filename"

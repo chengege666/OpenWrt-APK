@@ -47,7 +47,6 @@ install_passwall2() {
 
     local download_dir="${CACHE_DIR}/${plugin_name}"
     rm -rf "$download_dir"
-    mkdir -p "$download_dir"
 
     local pkg_zip_url
     pkg_zip_url=$(echo "$all_urls" | grep "passwall_packages_apk_${arch}\.zip$" | head -1)
@@ -75,26 +74,21 @@ install_passwall2() {
 
     local luci_name
     luci_name=$(basename "$luci_url")
-    echo "[下载] $luci_name"
-    if ! wget -q --timeout=120 -O "${download_dir}/${luci_name}" "$luci_url" 2>/dev/null; then
+    if ! download_file "$luci_url" "${download_dir}/${luci_name}"; then
         echo "[错误] 下载失败: $luci_name"
-        rm -f "${download_dir}/${luci_name}"
         return 1
     fi
 
     if [ -n "$i18n_url" ]; then
         local i18n_name
         i18n_name=$(basename "$i18n_url")
-        echo "[下载] $i18n_name"
-        wget -q --timeout=60 -O "${download_dir}/${i18n_name}" "$i18n_url" 2>/dev/null || echo "[警告] 中文包下载失败"
+        download_file "$i18n_url" "${download_dir}/${i18n_name}" || echo "[警告] 中文包下载失败"
     fi
 
     local zip_name
     zip_name=$(basename "$pkg_zip_url")
-    echo "[下载] $zip_name (依赖包)"
-    if ! wget -q --timeout=180 -O "${download_dir}/${zip_name}" "$pkg_zip_url" 2>/dev/null; then
+    if ! download_file "$pkg_zip_url" "${download_dir}/${zip_name}"; then
         echo "[错误] 下载失败: $zip_name"
-        rm -f "${download_dir}/${zip_name}"
         return 1
     fi
 
