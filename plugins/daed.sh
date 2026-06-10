@@ -104,6 +104,10 @@ install_daed() {
     local i18n_url
     i18n_url=$(echo "$all_urls" | grep -E "/luci-i18n-daed-zh-cn[-_][^/]*\.${pkg_ext}$" | head -1)
 
+    # 查找 vmlinux-btf（daed 核心依赖）
+    local vmlinux_url
+    vmlinux_url=$(echo "$all_urls" | grep -E "/vmlinux-btf[-_][^/]*\.${pkg_ext}$" | head -1)
+
     local daed_name
     daed_name=$(basename "$daed_url")
 
@@ -126,6 +130,12 @@ install_daed() {
         download_file "$i18n_url" "${CACHE_DIR}/${plugin_name}/${i18n_name}" || echo "[警告] 中文包下载失败"
     fi
 
+    local vmlinux_name=""
+    if [ -n "$vmlinux_url" ]; then
+        vmlinux_name=$(basename "$vmlinux_url")
+        download_file "$vmlinux_url" "${CACHE_DIR}/${plugin_name}/${vmlinux_name}" || echo "[警告] vmlinux-btf 下载失败"
+    fi
+
     # ----- 一次性安装所有包（apk 可以一起解析依赖）-----
     echo "[安装] 安装 $tag ..."
 
@@ -134,25 +144,28 @@ install_daed() {
         apk del --force-broken-world daed luci-app-daed luci-i18n-daed-zh-cn 2>/dev/null || true
     fi
 
-    # 收集所有 APK 路径
+    # 收集所有 APK 路径（包括 vmlinux-btf 依赖）
     local pkgs="${CACHE_DIR}/${plugin_name}/${daed_name} ${CACHE_DIR}/${plugin_name}/${luci_name}"
     [ -n "$i18n_name" ] && [ -f "${CACHE_DIR}/${plugin_name}/${i18n_name}" ] && pkgs="$pkgs ${CACHE_DIR}/${plugin_name}/${i18n_name}"
+    [ -n "$vmlinux_name" ] && [ -f "${CACHE_DIR}/${plugin_name}/${vmlinux_name}" ] && pkgs="$pkgs ${CACHE_DIR}/${plugin_name}/${vmlinux_name}"
 
     if [ "$is_apk" -eq 1 ]; then
         echo "[安装] 尝试标准安装..."
-        if apk add --allow-untrusted --force-overwrite $pkgs 2>/dev/null; then
-            echo "[成功] 标准安装完成"
-        else
-            echo "[提示] 标准安装失败，尝试强制安装..."
-            if apk add --allow-untrusted --force-overwrite --force-broken-world $pkgs 2>/dev/null; then
-                echo "[成功] 强制安装完成"
-            else
-                echo "[提示] 强制安装也失败，使用 apk extract 手动解压..."
-                for pkg in $pkgs; do
-                    echo "[手动] 解压 $(basename $pkg)..."
-                    apk extract "$pkg" 2>/dev/null || echo "[警告] 解压 $(basename $pkg) 失败"
-                done
-            fi
+        apk add --allow-untrusted --force-overwrite $pkgs 2>/dev/null && echo "[成功] 标准安装完成" || echo "[提示] 标准安装失败"
+
+        # 检查文件是否落地，没有就强制安装
+        if [ ! -f /usr/bin/daed ] && [ ! -f /usr/sbin/daed ]; then
+            echo "[提示] 文件未落地，尝试强制安装..."
+            apk add --allow-untrusted --force-overwrite --force-broken-world $pkgs 2>/dev/null && echo "[成功] 强制安装完成" || echo "[提示] 强制安装也失败"
+        fi
+
+        # 如果还是没有文件，用 apk extract 手动解压
+        if [ ! -f /usr/bin/daed ] && [ ! -f /usr/sbin/daed ]; then
+            echo "[提示] 文件仍未落地，使用 apk extract 手动解压..."
+            for pkg in $pkgs; do
+                echo "[手动] 解压 $(basename $pkg)..."
+                apk extract "$pkg" 2>/dev/null || echo "[警告] 解压 $(basename $pkg) 失败"
+            done
         fi
 
         # 检查文件是否落地
