@@ -129,13 +129,29 @@ install_daed() {
     # ----- 安装 daed 核心 -----
     echo "[安装] 安装 Daed 核心..."
 
+    # 先清理可能残留的强制安装记录
+    if [ "$is_apk" -eq 1 ]; then
+        apk del --force-broken-world daed 2>/dev/null || true
+    fi
+
     # 策略 1: 正常安装
     local daed_installed=0
     if [ "$is_apk" -eq 1 ]; then
-        if apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null; then
-            daed_installed=1
-        else
-            echo "[提示] 标准安装失败，尝试手动解压..."
+        echo "[安装] apk add --allow-untrusted ${daed_name}..."
+        local install_output
+        install_output=$(apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>&1)
+        if echo "$install_output" | grep -q "^OK"; then
+            if apk info -e daed 2>/dev/null; then
+                daed_installed=1
+            fi
+        fi
+        if [ "$daed_installed" -eq 0 ]; then
+            echo "[提示] 标准安装失败，尝试强制安装..."
+            install_output=$(apk add --allow-untrusted --force-overwrite --force-broken-world "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>&1)
+            echo "$install_output"
+            if apk info -e daed 2>/dev/null; then
+                daed_installed=1
+            fi
         fi
     else
         if opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null; then
@@ -143,43 +159,61 @@ install_daed() {
         fi
     fi
 
-    # 策略 2: 手动解压安装
+    # 策略 2: 手动解压
     if [ "$daed_installed" -eq 0 ]; then
+        local pkg_file="${CACHE_DIR}/${plugin_name}/${daed_name}"
+
+        echo "[手动] 分析包格式..."
         local tmp_dir="/tmp/daed-extract-$$"
         rm -rf "$tmp_dir"
         mkdir -p "$tmp_dir"
 
-        echo "[手动] 检查 APK 包结构..."
-        local pkg_file="${CACHE_DIR}/${plugin_name}/${daed_name}"
+        # OpenWrt APK 实际上是 .tar.gz 格式
+        tar xzf "$pkg_file" -C "$tmp_dir" 2>/dev/null || {
+            # 可能 gzip 压缩但不是 tar
+            gzip -dc "$pkg_file" > "$tmp_dir/raw" 2>/dev/null || {
+                # 可能是 ZIP (Android APK 格式)
+                unzip -o -q "$pkg_file" -d "$tmp_dir" 2>/dev/null || true
+            }
+        }
 
-        # 尝试作为标准 OpenWrt IPK 解压（控制包 + data.tar.gz）
-        if tar xzf "$pkg_file" -C "$tmp_dir" 2>/dev/null; then
-            # 检查 data.tar.gz (标准 OpenWrt IPK/APK 格式)
-            if [ -f "$tmp_dir/data.tar.gz" ]; then
-                echo "[手动] 检测到标准包格式，解压 data.tar.gz..."
-                tar xzf "$tmp_dir/data.tar.gz" -C / 2>/dev/null && daed_installed=1
-            elif [ -d "$tmp_dir/data" ]; then
-                echo "[手动] 检测到 data 目录，解压数据文件..."
-                cp -rf "$tmp_dir/data/"* / 2>/dev/null && daed_installed=1
-            fi
+        # 检查并解压内容
+        if [ -f "$tmp_dir/data.tar.gz" ]; then
+            echo "[手动] 检测到 data.tar.gz (标准 OpenWrt 包格式)"
+            tar xzf "$tmp_dir/data.tar.gz" -C / 2>/dev/null && daed_installed=1
         fi
 
-        # 如果第一种方式不行，尝试直接解压整个包到根目录
+        if [ "$daed_installed" -eq 0 ] && [ -f "$tmp_dir/raw" ]; then
+            echo "[手动] 检测到 gzip 压缩数据，尝试解压到根目录..."
+            gzip -dc "$pkg_file" | tar xf - -C / 2>/dev/null || {
+                cp -f "$tmp_dir/raw" /usr/bin/daed 2>/dev/null && chmod +x /usr/bin/daed
+            }
+        fi
+
         if [ "$daed_installed" -eq 0 ]; then
-            echo "[手动] 尝试直接解压到根目录..."
-            tar xzf "$pkg_file" -C / 2>/dev/null
-            if [ -f /usr/bin/daed ] || [ -f /usr/sbin/daed ]; then
-                daed_installed=1
-            fi
+            echo "[手动] 检查包内容..."
+            local pkg_contents
+            pkg_contents=$(ls -la "$tmp_dir/" 2>/dev/null | head -30)
+            echo "$pkg_contents"
+
+            # 直接解压到根目录试试
+            tar xzf "$pkg_file" -C / 2>/dev/null || true
+            gzip -dc "$pkg_file" | tar xf - -C / 2>/dev/null || true
+            unzip -o -q "$pkg_file" -d / 2>/dev/null || true
         fi
 
-        # 运行 postinst 脚本（如果有）
+        # 运行 postinst 脚本
         if [ -f "$tmp_dir/postinst" ]; then
             chmod +x "$tmp_dir/postinst"
             "$tmp_dir/postinst" 2>/dev/null || true
         fi
 
         rm -rf "$tmp_dir"
+
+        # 检查是否成功
+        if [ -f /usr/bin/daed ] || [ -f /usr/sbin/daed ] || [ -f /usr/local/bin/daed ]; then
+            daed_installed=1
+        fi
     fi
 
     if [ "$daed_installed" -eq 0 ]; then
