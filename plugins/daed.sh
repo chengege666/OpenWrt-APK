@@ -159,12 +159,12 @@ install_daed() {
             apk add --allow-untrusted --force-overwrite --force-broken-world $pkgs 2>/dev/null && echo "[成功] 强制安装完成" || echo "[提示] 强制安装也失败"
         fi
 
-        # 如果还是没有文件，用 apk extract 手动解压
+        # 如果还是没有文件，用 apk extract 手动解压（必须 cd / 才能解压到正确位置）
         if [ ! -f /usr/bin/daed ] && [ ! -f /usr/sbin/daed ]; then
             echo "[提示] 文件仍未落地，使用 apk extract 手动解压..."
             for pkg in $pkgs; do
                 echo "[手动] 解压 $(basename $pkg)..."
-                apk extract --allow-untrusted --root / "$pkg" 2>/dev/null || echo "[警告] 解压 $(basename $pkg) 失败"
+                (cd / && apk extract --allow-untrusted "$pkg" 2>/dev/null) || echo "[警告] 解压 $(basename $pkg) 失败"
             done
         fi
 
