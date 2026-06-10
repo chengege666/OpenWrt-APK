@@ -4,19 +4,11 @@
 install_daed_deps() {
     echo "[依赖] 检查 Daed 运行依赖..."
 
-    local common_pkgs="ca-bundle kmod-sched-core kmod-sched-bpf kmod-xdp-sockets-diag kmod-veth"
-
-    echo "[依赖] 安装内核模块依赖..."
+    echo "[依赖] 安装 GeoIP/GeoSite 数据..."
     if command -v apk >/dev/null 2>&1; then
-        for pkg in $common_pkgs; do
-            apk add --allow-untrusted "$pkg" 2>/dev/null && echo "[依赖] $pkg 安装成功" || echo "[警告] $pkg 安装失败（可能内核不支持）"
-        done
-        apk add --allow-untrusted v2ray-geoip v2ray-geosite 2>/dev/null && echo "[依赖] GeoIP/GeoSite 数据安装成功" || echo "[警告] GeoIP/GeoSite 数据安装失败"
+        apk add --allow-untrusted v2ray-geoip v2ray-geosite ca-bundle 2>/dev/null && echo "[依赖] 数据包安装成功" || echo "[依赖] 数据包已内置或无需安装"
     else
-        for pkg in $common_pkgs; do
-            opkg install "$pkg" 2>/dev/null && echo "[依赖] $pkg 安装成功" || echo "[警告] $pkg 安装失败（可能内核不支持）"
-        done
-        opkg install v2ray-geoip v2ray-geosite 2>/dev/null && echo "[依赖] GeoIP/GeoSite 数据安装成功" || echo "[警告] GeoIP/GeoSite 数据安装失败"
+        opkg install v2ray-geoip v2ray-geosite ca-bundle 2>/dev/null && echo "[依赖] 数据包安装成功" || echo "[依赖] 数据包已内置或无需安装"
     fi
 
     echo "[依赖] 依赖检查完成"
@@ -177,9 +169,9 @@ install_daed() {
     if [ -n "$i18n_url" ] && [ -f "${CACHE_DIR}/${plugin_name}/${i18n_name}" ]; then
         echo "[安装] 安装中文包..."
         if [ "$is_apk" -eq 1 ]; then
-            apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${i18n_name}" 2>/dev/null && echo "[成功] 中文包安装完成" || echo "[警告] 中文包安装失败"
+            apk add --allow-untrusted --force-overwrite --force-broken-world "${CACHE_DIR}/${plugin_name}/${i18n_name}" 2>/dev/null && echo "[成功] 中文包安装完成" || echo "[警告] 中文包安装失败"
         else
-            opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${i18n_name}" 2>/dev/null && echo "[成功] 中文包安装完成" || echo "[警告] 中文包安装失败"
+            opkg install --force-overwrite --force-depends "${CACHE_DIR}/${plugin_name}/${i18n_name}" 2>/dev/null && echo "[成功] 中文包安装完成" || echo "[警告] 中文包安装失败"
         fi
     fi
 
