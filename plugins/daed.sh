@@ -77,13 +77,13 @@ install_daed() {
     local all_urls
     all_urls=$(get_download_urls "$release_json")
 
-    # 查找 daed 核心包
+    # 查找 daed 核心包（文件名如 daed_2026.06.08-r1_x86_64-openwrt-25.12.apk）
     local daed_url
-    daed_url=$(echo "$all_urls" | grep -E "/daed[-_][^/]+${daed_arch}[^/]*\.${pkg_ext}$" | head -1)
+    daed_url=$(echo "$all_urls" | grep -E "daed[-_][0-9].*${daed_arch}[^/]*\.${pkg_ext}$" | head -1)
 
     if [ -z "$daed_url" ]; then
         local base_arch="${daed_arch%_generic}"
-        daed_url=$(echo "$all_urls" | grep -E "/daed[-_][^/]+${base_arch}[^/]*\.${pkg_ext}$" | head -1)
+        daed_url=$(echo "$all_urls" | grep -E "daed[-_][0-9].*${base_arch}[^/]*\.${pkg_ext}$" | head -1)
     fi
 
     if [ -z "$daed_url" ]; then
@@ -91,22 +91,22 @@ install_daed() {
         return 1
     fi
 
-    # 查找 luci-app-daed 界面包
+    # 查找 luci-app-daed 界面包（文件名如 luci-app-daed_1.4-r1_all-openwrt-25.12.apk）
     local luci_url
-    luci_url=$(echo "$all_urls" | grep -E "/luci-app-daed[-_][^/]*\.${pkg_ext}$" | head -1)
+    luci_url=$(echo "$all_urls" | grep -E "luci-app-daed[-_][0-9].*\.${pkg_ext}$" | head -1)
 
     if [ -z "$luci_url" ]; then
         echo "[错误] 未找到 luci-app-daed 界面包"
         return 1
     fi
 
-    # 查找中文包
+    # 查找中文包（文件名如 luci-i18n-daed-zh-cn_25.283.11553.bce4b5f_all-openwrt-25.12.apk）
     local i18n_url
-    i18n_url=$(echo "$all_urls" | grep -E "/luci-i18n-daed-zh-cn[-_][^/]*\.${pkg_ext}$" | head -1)
+    i18n_url=$(echo "$all_urls" | grep -E "luci-i18n-daed-zh-cn[-_][0-9].*\.${pkg_ext}$" | head -1)
 
-    # 查找 vmlinux-btf（daed 核心依赖）
+    # 查找 vmlinux-btf（daed 核心依赖，文件名如 vmlinux-btf_6.6.135_x86_64.ipk）
     local vmlinux_url
-    vmlinux_url=$(echo "$all_urls" | grep -E "/vmlinux-btf[-_][^/]*\.${pkg_ext}$" | head -1)
+    vmlinux_url=$(echo "$all_urls" | grep -E "vmlinux-btf[-_][0-9].*\.${pkg_ext}$" | head -1)
 
     local daed_name
     daed_name=$(basename "$daed_url")
@@ -164,7 +164,7 @@ install_daed() {
             echo "[提示] 文件仍未落地，使用 apk extract 手动解压..."
             for pkg in $pkgs; do
                 echo "[手动] 解压 $(basename $pkg)..."
-                apk extract "$pkg" 2>/dev/null || echo "[警告] 解压 $(basename $pkg) 失败"
+                apk extract --allow-untrusted "$pkg" 2>/dev/null || echo "[警告] 解压 $(basename $pkg) 失败"
             done
         fi
 
