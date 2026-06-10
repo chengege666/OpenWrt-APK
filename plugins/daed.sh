@@ -129,7 +129,7 @@ install_daed() {
             install_ok=1
         else
             echo "[重试] 尝试强制安装（忽略依赖）..."
-            apk add --allow-untrusted --force-overwrite --force-depends "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null && install_ok=1 || echo "[警告] 强制安装也失败"
+            apk add --allow-untrusted --force-overwrite --force-broken-world "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null && install_ok=1 || echo "[警告] 强制安装也失败"
         fi
     else
         if opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null; then
@@ -142,11 +142,13 @@ install_daed() {
 
     if [ "$install_ok" -eq 0 ]; then
         echo "[错误] Daed 核心安装失败"
-        echo "[提示] 请确认内核已开启 eBPF 支持（需开启以下内核选项）："
-        echo "  - CONFIG_DEVEL=y"
-        echo "  - CONFIG_KERNEL_DEBUG_INFO_BTF=y"
-        echo "  - CONFIG_KERNEL_BPF_EVENTS=y"
-        echo "  - CONFIG_KERNEL_CGROUP_BPF=y"
+        echo "[提示] 可能原因："
+        echo "  1. 内核未开启 eBPF 支持，请确认固件包含以下选项："
+        echo "     - CONFIG_DEVEL=y"
+        echo "     - CONFIG_KERNEL_DEBUG_INFO_BTF=y"
+        echo "     - CONFIG_KERNEL_BPF_EVENTS=y"
+        echo "     - CONFIG_KERNEL_CGROUP_BPF=y"
+        echo "  2. 当前固件版本与 daed 不兼容"
         return 1
     fi
     echo "[成功] Daed 核心安装完成"
