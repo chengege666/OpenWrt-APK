@@ -156,13 +156,19 @@ install_daed() {
     echo "[安装] 正在安装 LuCI 界面..."
     if [ "$is_apk" -eq 1 ]; then
         apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
-            echo "[错误] LuCI 界面安装失败"
-            return 1
+            echo "[重试] 尝试强制安装 LuCI 界面..."
+            apk add --allow-untrusted --force-overwrite --force-broken-world "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
+                echo "[错误] LuCI 界面安装失败"
+                return 1
+            }
         }
     else
         opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
-            echo "[错误] LuCI 界面安装失败"
-            return 1
+            echo "[重试] 尝试强制安装 LuCI 界面..."
+            opkg install --force-overwrite --force-depends "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
+                echo "[错误] LuCI 界面安装失败"
+                return 1
+            }
         }
     fi
     echo "[成功] LuCI 界面安装完成"
