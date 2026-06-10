@@ -138,15 +138,21 @@ install_daed() {
     local pkgs="${CACHE_DIR}/${plugin_name}/${daed_name} ${CACHE_DIR}/${plugin_name}/${luci_name}"
     [ -n "$i18n_name" ] && [ -f "${CACHE_DIR}/${plugin_name}/${i18n_name}" ] && pkgs="$pkgs ${CACHE_DIR}/${plugin_name}/${i18n_name}"
 
-    local install_ok=0
     if [ "$is_apk" -eq 1 ]; then
-        echo "[安装] apk add --allow-untrusted ..."
+        echo "[安装] 尝试标准安装..."
         if apk add --allow-untrusted --force-overwrite $pkgs 2>/dev/null; then
-            install_ok=1
             echo "[成功] 标准安装完成"
         else
             echo "[提示] 标准安装失败，尝试强制安装..."
-            apk add --allow-untrusted --force-overwrite --force-broken-world $pkgs 2>/dev/null
+            if apk add --allow-untrusted --force-overwrite --force-broken-world $pkgs 2>/dev/null; then
+                echo "[成功] 强制安装完成"
+            else
+                echo "[提示] 强制安装也失败，使用 apk extract 手动解压..."
+                for pkg in $pkgs; do
+                    echo "[手动] 解压 $(basename $pkg)..."
+                    apk extract "$pkg" 2>/dev/null || echo "[警告] 解压 $(basename $pkg) 失败"
+                done
+            fi
         fi
 
         # 检查文件是否落地
@@ -161,18 +167,15 @@ install_daed() {
             echo "[成功] LuCI 界面已安装"
         else
             echo "[错误] LuCI 界面文件未找到"
-            echo "[调试] 包中内容："
-            apk info "$daed_name" 2>/dev/null
-            apk info "$luci_name" 2>/dev/null
             echo "[提示] 请尝试手动安装：apk add --allow-untrusted $pkgs"
             return 1
         fi
     else
         # opkg 安装
         if opkg install --force-overwrite $pkgs 2>/dev/null; then
-            install_ok=1
+            echo "[成功] 安装完成"
         else
-            opkg install --force-overwrite --force-depends $pkgs 2>/dev/null
+            opkg install --force-overwrite --force-depends $pkgs 2>/dev/null || echo "[警告] 安装可能有问题"
         fi
 
         if [ -f /usr/bin/daed ] || [ -f /usr/sbin/daed ]; then
