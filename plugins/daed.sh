@@ -94,12 +94,12 @@ install_daed() {
 
     echo "[安装] 正在安装 Daed 核心..."
     if [ "$is_apk" -eq 1 ]; then
-        apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null || {
+        apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>&1 || {
             echo "[错误] Daed 核心安装失败"
             return 1
         }
     else
-        opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null || {
+        opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>&1 || {
             echo "[错误] Daed 核心安装失败"
             return 1
         }
@@ -108,12 +108,12 @@ install_daed() {
 
     echo "[安装] 正在安装 LuCI 界面..."
     if [ "$is_apk" -eq 1 ]; then
-        apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
+        apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>&1 || {
             echo "[错误] LuCI 界面安装失败"
             return 1
         }
     else
-        opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
+        opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>&1 || {
             echo "[错误] LuCI 界面安装失败"
             return 1
         }
