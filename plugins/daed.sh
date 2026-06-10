@@ -2,13 +2,27 @@
 # plugins/daed.sh - Daed 插件模块（基于 eBPF 的高性能透明代理）
 
 install_daed_deps() {
-    echo "[依赖] 检查 Daed 运行依赖..."
+    echo "[依赖] 安装 Daed 运行依赖..."
 
-    echo "[依赖] 安装 GeoIP/GeoSite 数据..."
+    # daed 运行所需的依赖包
+    local deps="ca-bundle v2ray-geoip v2ray-geosite"
+
     if command -v apk >/dev/null 2>&1; then
-        apk add --allow-untrusted v2ray-geoip v2ray-geosite ca-bundle 2>/dev/null && echo "[依赖] 数据包安装成功" || echo "[依赖] 数据包已内置或无需安装"
+        for pkg in $deps; do
+            if apk add --allow-untrusted "$pkg" 2>/dev/null; then
+                echo "[依赖] $pkg 安装成功"
+            else
+                echo "[依赖] $pkg 已内置或无需安装"
+            fi
+        done
     else
-        opkg install v2ray-geoip v2ray-geosite ca-bundle 2>/dev/null && echo "[依赖] 数据包安装成功" || echo "[依赖] 数据包已内置或无需安装"
+        for pkg in $deps; do
+            if opkg install "$pkg" 2>/dev/null; then
+                echo "[依赖] $pkg 安装成功"
+            else
+                echo "[依赖] $pkg 已内置或无需安装"
+            fi
+        done
     fi
 
     echo "[依赖] 依赖检查完成"
@@ -35,7 +49,6 @@ install_daed() {
     local pkg_ext="ipk"
     [ "$is_apk" -eq 1 ] && pkg_ext="apk"
 
-    # 架构映射：detect_arch → release 命名
     local daed_arch
     case "$arch" in
         x86_64)    daed_arch="x86_64" ;;
@@ -69,7 +82,6 @@ install_daed() {
     daed_url=$(echo "$all_urls" | grep -E "/daed[-_][^/]+${daed_arch}[^/]*\.${pkg_ext}$" | head -1)
 
     if [ -z "$daed_url" ]; then
-        echo "[重试] 尝试模糊匹配架构..."
         local base_arch="${daed_arch%_generic}"
         daed_url=$(echo "$all_urls" | grep -E "/daed[-_][^/]+${base_arch}[^/]*\.${pkg_ext}$" | head -1)
     fi
@@ -108,83 +120,156 @@ install_daed() {
         return 1
     fi
 
+    local i18n_name=""
     if [ -n "$i18n_url" ]; then
-        local i18n_name
         i18n_name=$(basename "$i18n_url")
         download_file "$i18n_url" "${CACHE_DIR}/${plugin_name}/${i18n_name}" || echo "[警告] 中文包下载失败"
     fi
 
-    echo "[安装] 正在安装 Daed 核心..."
-    local install_ok=0
+    # ----- 安装 daed 核心 -----
+    echo "[安装] 安装 Daed 核心..."
+
+    # 策略 1: 正常安装
+    local daed_installed=0
     if [ "$is_apk" -eq 1 ]; then
         if apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null; then
-            install_ok=1
+            daed_installed=1
         else
-            echo "[重试] 尝试强制安装（忽略依赖）..."
-            apk add --allow-untrusted --force-overwrite --force-broken-world "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null && install_ok=1 || echo "[警告] 强制安装也失败"
+            echo "[提示] 标准安装失败，尝试手动解压..."
         fi
     else
         if opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null; then
-            install_ok=1
-        else
-            echo "[重试] 尝试强制安装（忽略依赖）..."
-            opkg install --force-overwrite --force-depends "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null && install_ok=1 || echo "[警告] 强制安装也失败"
+            daed_installed=1
         fi
     fi
 
-    if [ "$install_ok" -eq 0 ]; then
+    # 策略 2: 手动解压安装
+    if [ "$daed_installed" -eq 0 ]; then
+        local tmp_dir="/tmp/daed-extract-$$"
+        rm -rf "$tmp_dir"
+        mkdir -p "$tmp_dir"
+
+        # OpenWrt APK/IPK 包是 tar.gz 格式
+        tar xzf "${CACHE_DIR}/${plugin_name}/${daed_name}" -C "$tmp_dir" 2>/dev/null
+
+        # 检查 data.tar.gz (标准 OpenWrt IPK/APK 格式)
+        if [ -f "$tmp_dir/data.tar.gz" ]; then
+            echo "[手动] 解压 data.tar.gz..."
+            tar xzf "$tmp_dir/data.tar.gz" -C / 2>/dev/null && daed_installed=1
+        fi
+
+        # 也可能是直接包含文件的 tar 包
+        if [ "$daed_installed" -eq 0 ]; then
+            # 看看包的结构
+            local has_bin
+            has_bin=$(tar tzf "${CACHE_DIR}/${plugin_name}/${daed_name}" 2>/dev/null | head -5)
+            if echo "$has_bin" | grep -q "usr"; then
+                echo "[手动] 直接解压到根目录..."
+                tar xzf "${CACHE_DIR}/${plugin_name}/${daed_name}" -C / 2>/dev/null && daed_installed=1
+            fi
+        fi
+
+        # 运行 postinst 脚本
+        if [ -f "$tmp_dir/postinst" ]; then
+            chmod +x "$tmp_dir/postinst"
+            "$tmp_dir/postinst" 2>/dev/null || true
+        fi
+
+        rm -rf "$tmp_dir"
+    fi
+
+    if [ "$daed_installed" -eq 0 ]; then
         echo "[错误] Daed 核心安装失败"
-        echo "[提示] 可能原因："
-        echo "  1. 内核未开启 eBPF 支持，请确认固件包含以下选项："
-        echo "     - CONFIG_DEVEL=y"
-        echo "     - CONFIG_KERNEL_DEBUG_INFO_BTF=y"
-        echo "     - CONFIG_KERNEL_BPF_EVENTS=y"
-        echo "     - CONFIG_KERNEL_CGROUP_BPF=y"
-        echo "  2. 当前固件版本与 daed 不兼容"
+        echo "[提示] 请确认系统版本与 daed 兼容，或尝试手动安装:"
+        echo "  apk add --allow-untrusted ${CACHE_DIR}/${plugin_name}/${daed_name}"
         return 1
     fi
-    echo "[成功] Daed 核心安装完成"
 
-    echo "[安装] 正在安装 LuCI 界面..."
-    if [ "$is_apk" -eq 1 ]; then
-        apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
-            echo "[重试] 尝试强制安装 LuCI 界面..."
-            apk add --allow-untrusted --force-overwrite --force-broken-world "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
-                echo "[错误] LuCI 界面安装失败"
-                return 1
-            }
-        }
+    # 验证二进制是否存在
+    local daed_bin=""
+    [ -f /usr/bin/daed ] && daed_bin="/usr/bin/daed"
+    [ -f /usr/sbin/daed ] && daed_bin="/usr/sbin/daed"
+
+    if [ -n "$daed_bin" ]; then
+        echo "[成功] Daed 核心已安装: $daed_bin"
     else
-        opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
-            echo "[重试] 尝试强制安装 LuCI 界面..."
-            opkg install --force-overwrite --force-depends "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null || {
-                echo "[错误] LuCI 界面安装失败"
-                return 1
-            }
-        }
+        echo "[警告] 未找到 daed 二进制文件，但包已解压"
+    fi
+
+    # ----- 安装 LuCI 界面 -----
+    echo "[安装] 安装 LuCI 界面..."
+    local luci_installed=0
+    if [ "$is_apk" -eq 1 ]; then
+        if apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null; then
+            luci_installed=1
+        else
+            echo "[提示] 标准安装失败，尝试手动解压..."
+        fi
+    else
+        if opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${luci_name}" 2>/dev/null; then
+            luci_installed=1
+        fi
+    fi
+
+    # 手动解压 LuCI
+    if [ "$luci_installed" -eq 0 ]; then
+        local tmp_dir="/tmp/daed-luci-extract-$$"
+        rm -rf "$tmp_dir"
+        mkdir -p "$tmp_dir"
+
+        if tar xzf "${CACHE_DIR}/${plugin_name}/${luci_name}" -C "$tmp_dir" 2>/dev/null; then
+            if [ -f "$tmp_dir/data.tar.gz" ]; then
+                tar xzf "$tmp_dir/data.tar.gz" -C / 2>/dev/null && luci_installed=1
+            else
+                tar xzf "${CACHE_DIR}/${plugin_name}/${luci_name}" -C / 2>/dev/null && luci_installed=1
+            fi
+        fi
+
+        if [ -f "$tmp_dir/postinst" ]; then
+            chmod +x "$tmp_dir/postinst"
+            "$tmp_dir/postinst" 2>/dev/null || true
+        fi
+
+        rm -rf "$tmp_dir"
+    fi
+
+    if [ "$luci_installed" -eq 0 ]; then
+        echo "[错误] LuCI 界面安装失败"
+        return 1
     fi
     echo "[成功] LuCI 界面安装完成"
 
-    # 安装中文包
-    if [ -n "$i18n_url" ] && [ -f "${CACHE_DIR}/${plugin_name}/${i18n_name}" ]; then
+    # ----- 安装中文包 -----
+    if [ -n "$i18n_name" ] && [ -f "${CACHE_DIR}/${plugin_name}/${i18n_name}" ]; then
         echo "[安装] 安装中文包..."
         if [ "$is_apk" -eq 1 ]; then
-            apk add --allow-untrusted --force-overwrite --force-broken-world "${CACHE_DIR}/${plugin_name}/${i18n_name}" 2>/dev/null && echo "[成功] 中文包安装完成" || echo "[警告] 中文包安装失败"
+            if ! apk add --allow-untrusted --force-overwrite "${CACHE_DIR}/${plugin_name}/${i18n_name}" 2>/dev/null; then
+                # 手动解压
+                local tmp_dir="/tmp/daed-i18n-extract-$$"
+                rm -rf "$tmp_dir"
+                mkdir -p "$tmp_dir"
+                if tar xzf "${CACHE_DIR}/${plugin_name}/${i18n_name}" -C "$tmp_dir" 2>/dev/null; then
+                    [ -f "$tmp_dir/data.tar.gz" ] && tar xzf "$tmp_dir/data.tar.gz" -C / 2>/dev/null
+                    tar xzf "${CACHE_DIR}/${plugin_name}/${i18n_name}" -C / 2>/dev/null
+                fi
+                rm -rf "$tmp_dir"
+                echo "[成功] 中文包已安装"
+            else
+                echo "[成功] 中文包安装完成"
+            fi
         else
-            opkg install --force-overwrite --force-depends "${CACHE_DIR}/${plugin_name}/${i18n_name}" 2>/dev/null && echo "[成功] 中文包安装完成" || echo "[警告] 中文包安装失败"
+            opkg install --force-overwrite "${CACHE_DIR}/${plugin_name}/${i18n_name}" 2>/dev/null || echo "[警告] 中文包安装失败"
         fi
     fi
 
-    echo "[修复] 修复依赖..."
-    fix_dependencies
-
-    echo "[启用] 启用 Daed 服务..."
+    # ----- 创建/启用服务 -----
+    echo "[启用] 配置 Daed 服务..."
     if [ -f /etc/init.d/daed ]; then
         /etc/init.d/daed enable 2>/dev/null
         /etc/init.d/daed start 2>/dev/null
         echo "[成功] Daed 服务已启用"
     else
-        echo "[警告] 未找到 Daed 服务脚本，尝试创建..."
+        echo "[创建] 创建 Daed 服务脚本..."
         cat > /etc/init.d/daed << 'INITEOF'
 #!/bin/sh /etc/rc.common
 
@@ -210,16 +295,29 @@ service_triggers() {
 INITEOF
         chmod +x /etc/init.d/daed
         /etc/init.d/daed enable 2>/dev/null
+        /etc/init.d/daed start 2>/dev/null
         echo "[成功] Daed 服务脚本已创建并启用"
     fi
 
-    echo "[清理] 强制刷新 LuCI 缓存..."
+    echo "[修复] 修复依赖..."
+    fix_dependencies
+
+    echo "[清理] 清除 LuCI 缓存..."
     rm -rf /tmp/luci-* /tmp/luci-modulecache* /tmp/luci-indexcache* /tmp/luci-sessions 2>/dev/null
 
     echo "[重启] 重启 LuCI..."
     restart_luci
 
-    show_success
+    echo ""
+    echo "================================"
+    echo " Daed 安装完成"
+    echo "================================"
+    echo ""
+    echo "请尝试以下操作让 LuCI 菜单出现："
+    echo "1. 浏览器 Ctrl+Shift+R 强制刷新"
+    echo "2. 或退出登录后重新登录"
+    echo "3. 或重启设备"
+    echo ""
 }
 
 uninstall_daed() {
@@ -232,6 +330,10 @@ uninstall_daed() {
     uninstall_plugin "luci-app-daed"
     uninstall_plugin "daed"
     uninstall_plugin "luci-i18n-daed-zh-cn"
+
+    echo "[清理] 清理残留文件..."
+    rm -f /etc/init.d/daed
+    rm -rf /tmp/luci-* /tmp/luci-modulecache* /tmp/luci-indexcache* 2>/dev/null
 
     show_success
 }
