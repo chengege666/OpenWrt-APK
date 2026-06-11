@@ -1,5 +1,5 @@
 #!/bin/sh
-# plugins/passwall2.sh - luci-app-passwall2 插件模块
+# plugins/passwall2.sh - PassWall2 插件模块
 
 install_passwall2() {
     echo ""
@@ -12,9 +12,9 @@ install_passwall2() {
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
 
-    local owner="Openwrt-Passwall"
-    local repo="openwrt-passwall2"
-    local plugin_name="passwall2"
+    local owner repo
+    owner=$(get_plugin_owner "passwall2")
+    repo=$(get_plugin_repo "passwall2")
 
     local release_json
     release_json=$(get_latest_release "$owner" "$repo") || return 1
@@ -26,6 +26,7 @@ install_passwall2() {
     local all_urls
     all_urls=$(get_download_urls "$release_json")
 
+    # 下载 LuCI 主包
     local luci_url
     luci_url=$(echo "$all_urls" | grep "luci-app-passwall2" | grep "\.apk$" | head -1)
 
@@ -35,7 +36,6 @@ install_passwall2() {
 
     local i18n_url
     i18n_url=$(echo "$all_urls" | grep "luci-i18n-passwall2-zh-cn" | grep "\.apk$" | head -1)
-
     if [ -z "$i18n_url" ]; then
         i18n_url=$(echo "$all_urls" | grep "luci-i18n-passwall2-zh-cn" | grep "\.ipk$" | head -1)
     fi
@@ -45,9 +45,24 @@ install_passwall2() {
         return 1
     fi
 
-    local download_dir="${CACHE_DIR}/${plugin_name}"
+    local download_dir="${CACHE_DIR}/passwall2"
     rm -rf "$download_dir"
+    mkdir -p "$download_dir"
 
+    local luci_name
+    luci_name=$(basename "$luci_url")
+    if ! download_file "$luci_url" "${download_dir}/${luci_name}"; then
+        echo "[错误] 下载失败: $luci_name"
+        return 1
+    fi
+
+    if [ -n "$i18n_url" ]; then
+        local i18n_name
+        i18n_name=$(basename "$i18n_url")
+        download_file "$i18n_url" "${download_dir}/${i18n_name}" || echo "[警告] 中文包下载失败"
+    fi
+
+    # 下载依赖包 zip
     local pkg_zip_url
     pkg_zip_url=$(echo "$all_urls" | grep "passwall_packages_apk_${arch}\.zip$" | head -1)
 
@@ -72,19 +87,6 @@ install_passwall2() {
         return 1
     fi
 
-    local luci_name
-    luci_name=$(basename "$luci_url")
-    if ! download_file "$luci_url" "${download_dir}/${luci_name}"; then
-        echo "[错误] 下载失败: $luci_name"
-        return 1
-    fi
-
-    if [ -n "$i18n_url" ]; then
-        local i18n_name
-        i18n_name=$(basename "$i18n_url")
-        download_file "$i18n_url" "${download_dir}/${i18n_name}" || echo "[警告] 中文包下载失败"
-    fi
-
     local zip_name
     zip_name=$(basename "$pkg_zip_url")
     if ! download_file "$pkg_zip_url" "${download_dir}/${zip_name}"; then
@@ -101,17 +103,14 @@ install_passwall2() {
 
     rm -f "${download_dir}/${zip_name}"
 
+    # 安装
     local is_apk=0
     case "$luci_name" in *.apk) is_apk=1 ;; esac
 
     if [ "$is_apk" -eq 1 ]; then
         local apk_files
         apk_files=$(find "${download_dir}/packages" -name "*.apk" 2>/dev/null)
-
-        if [ -z "$apk_files" ]; then
-            echo "[警告] 解压后未找到 APK 依赖包，尝试查找 IPK..."
-            apk_files=$(find "${download_dir}/packages" -name "*.ipk" 2>/dev/null)
-        fi
+        [ -z "$apk_files" ] && apk_files=$(find "${download_dir}/packages" -name "*.ipk" 2>/dev/null)
 
         if [ -n "$apk_files" ]; then
             local pkg_count
@@ -120,17 +119,13 @@ install_passwall2() {
             apk add --allow-untrusted --force-overwrite $apk_files 2>/dev/null || echo "[警告] 部分依赖包安装失败"
         fi
 
-        echo "[安装] 安装 LuCI 主程序..."
         apk add --allow-untrusted "${download_dir}/${luci_name}" 2>/dev/null
-
-        if [ -f "${download_dir}/${i18n_name:-__empty__}" ] && [ -n "$i18n_name" ]; then
-            echo "[安装] 安装中文包..."
-            apk add --allow-untrusted "${download_dir}/${i18n_name}" 2>/dev/null
+        if [ -f "${download_dir}/${i18n_name:-__empty__}" ] && [ -n "$i18n_url" ]; then
+            apk add --allow-untrusted "${download_dir}/${i18n_name:-}" 2>/dev/null
         fi
     else
         local ipk_files
         ipk_files=$(find "${download_dir}/packages" -name "*.ipk" 2>/dev/null)
-
         if [ -n "$ipk_files" ]; then
             local pkg_count
             pkg_count=$(echo "$ipk_files" | wc -l)
@@ -138,43 +133,25 @@ install_passwall2() {
             opkg install --force-reinstall --force-overwrite $ipk_files 2>/dev/null || echo "[警告] 部分依赖包安装失败"
         fi
 
-        echo "[安装] 安装 LuCI 主程序..."
         opkg install --force-overwrite "${download_dir}/${luci_name}" 2>/dev/null
-
-        if [ -f "${download_dir}/${i18n_name:-__empty__}" ] && [ -n "$i18n_name" ]; then
-            echo "[安装] 安装中文包..."
-            opkg install --force-overwrite "${download_dir}/${i18n_name}" 2>/dev/null
+        if [ -f "${download_dir}/${i18n_name:-__empty__}" ] && [ -n "$i18n_url" ]; then
+            opkg install --force-overwrite "${download_dir}/${i18n_name:-}" 2>/dev/null
         fi
     fi
 
     echo "[成功] 安装完成"
-
-    echo "[重启] 重启 LuCI..."
     restart_luci
-
+    save_version "passwall2" "$tag"
     show_success
 }
 
 uninstall_passwall2() {
-    echo ""
-    echo "================================"
-    echo " 卸载 PassWall2"
-    echo "================================"
-    echo ""
-
-    uninstall_plugin "luci-app-passwall2"
-    uninstall_plugin "luci-i18n-passwall2-zh-cn"
-
-    show_success
+    manager_uninstall "passwall2" "luci-app-passwall2" "luci-i18n-passwall2-zh-cn"
 }
 
 update_passwall2() {
-    echo ""
-    echo "================================"
-    echo " 更新 PassWall2"
-    echo "================================"
-    echo ""
-
-    cleanup_old_cache
-    install_passwall2
+    local owner repo
+    owner=$(get_plugin_owner "passwall2")
+    repo=$(get_plugin_repo "passwall2")
+    manager_update "passwall2" "$owner" "$repo" install_passwall2
 }

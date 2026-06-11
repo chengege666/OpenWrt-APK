@@ -1,120 +1,24 @@
 #!/bin/sh
-# plugins/taskplan.sh - luci-app-taskplan 插件模块
+# plugins/taskplan.sh - TaskPlan 插件模块
 
 install_taskplan() {
-    echo ""
-    echo "================================"
-    echo " 安装 TaskPlan"
-    echo "================================"
-    echo ""
+    manager_print_header "taskplan"
 
-    local owner="sirpdboy"
-    local repo="luci-app-taskplan"
-    local plugin_name="taskplan"
+    local owner repo
+    owner=$(get_plugin_owner "taskplan")
+    repo=$(get_plugin_repo "taskplan")
 
-    local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || return 1
-
-    local tag
-    tag=$(get_release_tag "$release_json")
-    echo "[版本] $tag"
-
-    local all_urls
-    all_urls=$(get_download_urls "$release_json")
-
-    local app_url
-    app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
-
-    if [ -z "$app_url" ]; then
-        echo "[重试] 当前版本无安装包，尝试获取上一版本..."
-        local api_url="https://api.github.com/repos/${owner}/${repo}/releases"
-        local releases_list
-        releases_list=$(_fetch_github_api "$api_url" "Releases list: $owner/$repo")
-        if [ -n "$releases_list" ]; then
-            all_urls=$(echo "$releases_list" | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p')
-            app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
-            if [ -n "$app_url" ]; then
-                tag=$(echo "$app_url" | sed 's|.*/releases/download/||' | sed 's|/.*||')
-                echo "[版本] 回退至 $tag"
-            fi
-        fi
-    fi
-
-    if [ -z "$app_url" ]; then
-        echo "[错误] 未找到 luci-app-taskplan 安装包"
-        return 1
-    fi
-
-    local i18n_url
-    i18n_url=$(echo "$all_urls" | grep "luci-i18n-taskplan-zh-cn-" | grep "\.apk$" | head -1)
-
-    local apk_files=""
-
-    if [ -n "$app_url" ]; then
-        local app_name
-        app_name=$(basename "$app_url")
-        if ! download_file "$app_url" "${CACHE_DIR}/${plugin_name}/${app_name}"; then
-            echo "[错误] 下载失败: $app_name"
-            return 1
-        fi
-        apk_files="$apk_files ${CACHE_DIR}/${plugin_name}/${app_name}"
-    fi
-
-    if [ -n "$i18n_url" ]; then
-        local i18n_name
-        i18n_name=$(basename "$i18n_url")
-        if ! download_file "$i18n_url" "${CACHE_DIR}/${plugin_name}/${i18n_name}"; then
-            echo "[警告] 中文包下载失败，仅安装主程序"
-        else
-            apk_files="$apk_files ${CACHE_DIR}/${plugin_name}/${i18n_name}"
-        fi
-    fi
-
-    if [ -z "$apk_files" ]; then
-        echo "[错误] 未找到安装包文件"
-        return 1
-    fi
-
-    local pkg_count
-    pkg_count=$(echo "$apk_files" | wc -w)
-    echo "[安装] 正在安装 $pkg_count 个包..."
-
-    if apk add --allow-untrusted --force-overwrite $apk_files 2>/dev/null; then
-        echo "[成功] 安装完成"
-    else
-        echo "[错误] 安装失败"
-        return 1
-    fi
-
-    echo "[修复] 修复依赖..."
-    fix_dependencies
-
-    echo "[重启] 重启 LuCI..."
-    restart_luci
-
-    show_success
+    cleanup_old_cache
+    manager_install_apk "taskplan" "$owner" "$repo" ""
 }
 
 uninstall_taskplan() {
-    echo ""
-    echo "================================"
-    echo " 卸载 TaskPlan"
-    echo "================================"
-    echo ""
-
-    uninstall_plugin "luci-app-taskplan"
-    uninstall_plugin "luci-i18n-taskplan-zh-cn"
-
-    show_success
+    manager_uninstall "taskplan" "luci-app-taskplan" "luci-i18n-taskplan-zh-cn"
 }
 
 update_taskplan() {
-    echo ""
-    echo "================================"
-    echo " 更新 TaskPlan"
-    echo "================================"
-    echo ""
-
-    cleanup_old_cache
-    install_taskplan
+    local owner repo
+    owner=$(get_plugin_owner "taskplan")
+    repo=$(get_plugin_repo "taskplan")
+    manager_update "taskplan" "$owner" "$repo" install_taskplan
 }

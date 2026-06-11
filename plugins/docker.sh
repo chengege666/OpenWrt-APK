@@ -36,15 +36,14 @@ install_docker() {
         /etc/init.d/dockerd start 2>/dev/null
     fi
 
-    echo "[修复] 修复依赖..."
     fix_dependencies
 
     echo "[清理] 清除 LuCI 缓存..."
     rm -rf /tmp/luci-* 2>/dev/null
 
-    echo "[重启] 重启 LuCI..."
     restart_luci
 
+    save_version "docker" "installed"
     show_success
 }
 
@@ -66,6 +65,7 @@ uninstall_docker() {
     uninstall_plugin "dockerd"
     uninstall_plugin "luci-i18n-dockerman-zh-cn"
 
+    remove_version "docker"
     show_success
 }
 

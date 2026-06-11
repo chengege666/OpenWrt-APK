@@ -1,5 +1,5 @@
 #!/bin/sh
-# plugins/lucky.sh - luci-app-lucky 插件模块
+# plugins/lucky.sh - Lucky 插件模块
 
 install_lucky() {
     echo ""
@@ -12,7 +12,6 @@ install_lucky() {
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
 
-    local openwrt_ver
     local ver_prefix="openwrt-24.10"
     if [ -f /etc/openwrt_release ]; then
         . /etc/openwrt_release 2>/dev/null
@@ -24,9 +23,9 @@ install_lucky() {
     fi
     echo "[系统] OpenWrt $ver_prefix"
 
-    local owner="sirpdboy"
-    local repo="luci-app-lucky"
-    local plugin_name="lucky"
+    local owner repo
+    owner=$(get_plugin_owner "lucky")
+    repo=$(get_plugin_repo "lucky")
 
     local release_json
     release_json=$(get_latest_release "$owner" "$repo") || return 1
@@ -58,42 +57,38 @@ install_lucky() {
     local tarball_name
     tarball_name=$(basename "$tarball_url")
 
-    if ! download_file "$tarball_url" "${CACHE_DIR}/${plugin_name}/${tarball_name}"; then
+    if ! download_file "$tarball_url" "${CACHE_DIR}/lucky/${tarball_name}"; then
         echo "[错误] 下载失败"
         return 1
     fi
 
     echo "[解压] 正在解压..."
-    if ! tar xzf "${CACHE_DIR}/${plugin_name}/${tarball_name}" -C "${CACHE_DIR}/${plugin_name}" 2>/dev/null; then
+    if ! tar xzf "${CACHE_DIR}/lucky/${tarball_name}" -C "${CACHE_DIR}/lucky" 2>/dev/null; then
         echo "[错误] 解压失败"
-        rm -f "${CACHE_DIR}/${plugin_name}/${tarball_name}"
+        rm -f "${CACHE_DIR}/lucky/${tarball_name}"
         return 1
     fi
 
-    rm -f "${CACHE_DIR}/${plugin_name}/${tarball_name}"
+    rm -f "${CACHE_DIR}/lucky/${tarball_name}"
 
-    local ipk_files
-    ipk_files=$(find "${CACHE_DIR}/${plugin_name}" -name "*.apk" -o -name "*.ipk" 2>/dev/null)
+    local pkg_files
+    pkg_files=$(find "${CACHE_DIR}/lucky" \( -name "*.apk" -o -name "*.ipk" \) 2>/dev/null)
 
-    if [ -z "$ipk_files" ]; then
+    if [ -z "$pkg_files" ]; then
         echo "[错误] 未找到安装包文件"
         return 1
     fi
 
     local pkg_count
-    pkg_count=$(echo "$ipk_files" | wc -l)
+    pkg_count=$(echo "$pkg_files" | wc -l)
     echo "[安装] 正在安装 $pkg_count 个包..."
 
     local apk_list=""
     local ipk_list=""
-    for f in $ipk_files; do
+    for f in $pkg_files; do
         case "$f" in
-            *.apk)
-                apk_list="$apk_list $f"
-                ;;
-            *.ipk)
-                ipk_list="$ipk_list $f"
-                ;;
+            *.apk) apk_list="$apk_list $f" ;;
+            *.ipk) ipk_list="$ipk_list $f" ;;
         esac
     done
 
@@ -119,32 +114,18 @@ install_lucky() {
 
     echo "[成功] 安装完成"
 
-    echo "[重启] 重启 LuCI..."
     restart_luci
-
+    save_version "lucky" "$tag"
     show_success
 }
 
 uninstall_lucky() {
-    echo ""
-    echo "================================"
-    echo " 卸载 Lucky"
-    echo "================================"
-    echo ""
-
-    uninstall_plugin "luci-app-lucky"
-    uninstall_plugin "lucky"
-
-    show_success
+    manager_uninstall "lucky" "luci-app-lucky" "lucky"
 }
 
 update_lucky() {
-    echo ""
-    echo "================================"
-    echo " 更新 Lucky"
-    echo "================================"
-    echo ""
-
-    cleanup_old_cache
-    install_lucky
+    local owner repo
+    owner=$(get_plugin_owner "lucky")
+    repo=$(get_plugin_repo "lucky")
+    manager_update "lucky" "$owner" "$repo" install_lucky
 }

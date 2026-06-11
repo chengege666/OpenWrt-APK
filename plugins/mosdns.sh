@@ -23,9 +23,9 @@ install_mosdns() {
     fi
     echo "[系统] OpenWrt $openwrt_ver"
 
-    local owner="sbwml"
-    local repo="luci-app-mosdns"
-    local plugin_name="mosdns"
+    local owner repo
+    owner=$(get_plugin_owner "mosdns")
+    repo=$(get_plugin_repo "mosdns")
 
     local release_json
     release_json=$(get_latest_release "$owner" "$repo") || return 1
@@ -57,22 +57,22 @@ install_mosdns() {
     local tarball_name
     tarball_name=$(basename "$tarball_url")
 
-    if ! download_file "$tarball_url" "${CACHE_DIR}/${plugin_name}/${tarball_name}"; then
+    if ! download_file "$tarball_url" "${CACHE_DIR}/mosdns/${tarball_name}"; then
         echo "[错误] 下载失败"
         return 1
     fi
 
     echo "[解压] 正在解压..."
-    if ! tar xzf "${CACHE_DIR}/${plugin_name}/${tarball_name}" -C "${CACHE_DIR}/${plugin_name}" 2>/dev/null; then
+    if ! tar xzf "${CACHE_DIR}/mosdns/${tarball_name}" -C "${CACHE_DIR}/mosdns" 2>/dev/null; then
         echo "[错误] 解压失败"
-        rm -f "${CACHE_DIR}/${plugin_name}/${tarball_name}"
+        rm -f "${CACHE_DIR}/mosdns/${tarball_name}"
         return 1
     fi
 
-    rm -f "${CACHE_DIR}/${plugin_name}/${tarball_name}"
+    rm -f "${CACHE_DIR}/mosdns/${tarball_name}"
 
     local apk_files
-    apk_files=$(find "${CACHE_DIR}/${plugin_name}" -name "*.apk" 2>/dev/null)
+    apk_files=$(find "${CACHE_DIR}/mosdns" -name "*.apk" 2>/dev/null)
 
     if [ -z "$apk_files" ]; then
         echo "[错误] 未找到 APK 文件"
@@ -90,36 +90,18 @@ install_mosdns() {
         return 1
     fi
 
-    echo "[修复] 修复依赖..."
-    fix_dependencies
-
-    echo "[重启] 重启 LuCI..."
-    restart_luci
-
+    manager_post_install "mosdns" "mosdns"
+    save_version "mosdns" "$tag"
     show_success
 }
 
 uninstall_mosdns() {
-    echo ""
-    echo "================================"
-    echo " 卸载 MosDNS"
-    echo "================================"
-    echo ""
-
-    uninstall_plugin "luci-app-mosdns"
-    uninstall_plugin "mosdns"
-    uninstall_plugin "luci-i18n-mosdns-zh-cn"
-
-    show_success
+    manager_uninstall "mosdns" "luci-app-mosdns" "mosdns" "luci-i18n-mosdns-zh-cn"
 }
 
 update_mosdns() {
-    echo ""
-    echo "================================"
-    echo " 更新 MosDNS"
-    echo "================================"
-    echo ""
-
-    cleanup_old_cache
-    install_mosdns
+    local owner repo
+    owner=$(get_plugin_owner "mosdns")
+    repo=$(get_plugin_repo "mosdns")
+    manager_update "mosdns" "$owner" "$repo" install_mosdns
 }

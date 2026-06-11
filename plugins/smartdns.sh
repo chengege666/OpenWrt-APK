@@ -12,9 +12,9 @@ install_smartdns() {
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
 
-    local owner="pymumu"
-    local repo="smartdns"
-    local plugin_name="smartdns"
+    local owner repo
+    owner=$(get_plugin_owner "smartdns")
+    repo=$(get_plugin_repo "smartdns")
 
     local release_json
     release_json=$(get_latest_release "$owner" "$repo") || return 1
@@ -26,12 +26,11 @@ install_smartdns() {
     local all_urls
     all_urls=$(get_download_urls "$release_json")
 
-    local download_dir="${CACHE_DIR}/${plugin_name}"
+    local download_dir="${CACHE_DIR}/smartdns"
     rm -rf "$download_dir"
     mkdir -p "$download_dir"
 
     echo "[步骤 1/2] 下载 SmartDNS 核心..."
-    local core_name="smartdns-${arch}"
     local core_url
     core_url=$(echo "$all_urls" | grep "smartdns-${arch}$" | head -1)
 
@@ -58,7 +57,6 @@ install_smartdns() {
 
     if [ ! -s "${download_dir}/smartdns" ]; then
         echo "[错误] 下载文件为空"
-        rm -f "${download_dir}/smartdns"
         return 1
     fi
     echo "[成功] 核心下载完成"
@@ -108,8 +106,6 @@ install_smartdns() {
 
     if [ ! -s "${download_dir}/${luci_file}" ]; then
         echo "[错误] 下载文件为空"
-        rm -f "${download_dir}/smartdns"
-        rm -f "${download_dir}/${luci_file}"
         return 1
     fi
     echo "[成功] LuCI 下载完成"
@@ -124,7 +120,6 @@ install_smartdns() {
         echo "[成功] 核心安装完成"
     else
         echo "[错误] 核心安装失败"
-        rm -rf "$download_dir"
         return 1
     fi
 
@@ -160,7 +155,6 @@ INITEOF
         echo "[警告] LuCI 界面安装可能有问题，继续执行..."
     fi
 
-    echo "[修复] 修复依赖..."
     fix_dependencies
 
     echo "[启用] 启用 SmartDNS 服务..."
@@ -168,9 +162,8 @@ INITEOF
         /etc/init.d/smartdns enable 2>/dev/null
     fi
 
-    echo "[重启] 重启 LuCI..."
     restart_luci
-
+    save_version "smartdns" "$tag"
     show_success
 }
 
@@ -187,7 +180,6 @@ uninstall_smartdns() {
         /etc/init.d/smartdns disable 2>/dev/null
     fi
 
-    echo "[卸载] 正在卸载 SmartDNS..."
     uninstall_plugin "luci-app-smartdns"
     uninstall_plugin "luci-app-smartdns-lite"
     uninstall_plugin "luci-i18n-smartdns-zh-cn"
@@ -196,19 +188,14 @@ uninstall_smartdns() {
     rm -f /usr/bin/smartdns
     rm -f /etc/init.d/smartdns
 
-    echo "[重启] 重启 LuCI..."
+    remove_version "smartdns"
     restart_luci
-
     show_success
 }
 
 update_smartdns() {
-    echo ""
-    echo "================================"
-    echo " 更新 SmartDNS"
-    echo "================================"
-    echo ""
-
-    cleanup_old_cache
-    install_smartdns
+    local owner repo
+    owner=$(get_plugin_owner "smartdns")
+    repo=$(get_plugin_repo "smartdns")
+    manager_update "smartdns" "$owner" "$repo" install_smartdns
 }

@@ -29,11 +29,7 @@ install_openclash_deps() {
 }
 
 install_openclash() {
-    echo ""
-    echo "================================"
-    echo " 安装 OpenClash"
-    echo "================================"
-    echo ""
+    manager_print_header "openclash"
 
     local arch
     arch=$(detect_arch) || return 1
@@ -41,73 +37,21 @@ install_openclash() {
 
     install_openclash_deps
 
-    local owner="vernesong"
-    local repo="OpenClash"
-    local plugin_name="openclash"
+    local owner repo
+    owner=$(get_plugin_owner "openclash")
+    repo=$(get_plugin_repo "openclash")
 
-    local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || return 1
-
-    local tag
-    tag=$(get_release_tag "$release_json")
-    echo "[版本] $tag"
-
-    local apk_url
-    apk_url="https://github.com/${owner}/${repo}/releases/download/${tag}/luci-app-openclash-${tag#v}.apk"
-
-    if ! download_file "$apk_url" "${CACHE_DIR}/${plugin_name}/luci-app-openclash.apk"; then
-        echo "[错误] 下载失败"
-        return 1
-    fi
-
-    echo "[安装] 正在安装..."
-    cd "${CACHE_DIR}/${plugin_name}" || return 1
-    if apk add --allow-untrusted --force-overwrite --clean-protected *.apk 2>/dev/null; then
-        echo "[成功] APK 安装完成"
-    else
-        echo "[错误] APK 安装失败"
-        return 1
-    fi
-
-    echo "[修复] 修复依赖..."
-    fix_dependencies
-
-    echo "[启用] 启用 OpenClash 服务..."
-    if [ -f /etc/init.d/openclash ]; then
-        /etc/init.d/openclash enable 2>/dev/null
-        /etc/init.d/openclash start 2>/dev/null
-    fi
-
-    echo "[清理] 清除 LuCI 缓存..."
-    rm -rf /tmp/luci-* 2>/dev/null
-
-    echo "[重启] 重启 LuCI..."
-    restart_luci
-
-    show_success
+    cleanup_old_cache
+    manager_install_apk "openclash" "$owner" "$repo" "openclash"
 }
 
 uninstall_openclash() {
-    echo ""
-    echo "================================"
-    echo " 卸载 OpenClash"
-    echo "================================"
-    echo ""
-
-    uninstall_plugin "luci-app-openclash"
-    uninstall_plugin "openclash"
-    uninstall_plugin "luci-i18n-openclash-zh-cn"
-
-    show_success
+    manager_uninstall "openclash" "luci-app-openclash" "openclash" "luci-i18n-openclash-zh-cn"
 }
 
 update_openclash() {
-    echo ""
-    echo "================================"
-    echo " 更新 OpenClash"
-    echo "================================"
-    echo ""
-
-    cleanup_old_cache
-    install_openclash
+    local owner repo
+    owner=$(get_plugin_owner "openclash")
+    repo=$(get_plugin_repo "openclash")
+    manager_update "openclash" "$owner" "$repo" install_openclash
 }

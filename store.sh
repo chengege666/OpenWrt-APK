@@ -6,6 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/core/network.sh"
 . "${SCRIPT_DIR}/core/github.sh"
 . "${SCRIPT_DIR}/core/install.sh"
+. "${SCRIPT_DIR}/core/version.sh"
+. "${SCRIPT_DIR}/core/registry.sh"
+. "${SCRIPT_DIR}/core/manager.sh"
 . "${SCRIPT_DIR}/core/ui.sh"
 
 . "${SCRIPT_DIR}/plugins/openclash.sh"
@@ -271,6 +274,9 @@ update_all() {
     update_docker
     update_luci_theme_aurora
     update_lucky
+    update_luci_theme_argon
+    update_taskplan
+    update_passwall2
     update_smartdns
     update_daed
 
@@ -290,6 +296,7 @@ uninstall_store() {
     echo "将删除以下内容："
     echo "  - 脚本目录: ${SCRIPT_DIR}"
     echo "  - 缓存目录: ${CACHE_DIR}"
+    echo "  - 版本记录: ${VERSION_DIR}"
     echo "  - 快捷命令: /usr/bin/apk-store"
     echo ""
     printf "确认卸载？(y/n): "
@@ -298,6 +305,7 @@ uninstall_store() {
         y|Y|yes|YES)
             rm -rf "${SCRIPT_DIR}"
             rm -rf "${CACHE_DIR}"
+            rm -rf "${VERSION_DIR}"
             rm -f /usr/bin/apk-store
             echo "[成功] 脚本已卸载"
             exit 0
@@ -339,7 +347,7 @@ update_store() {
     wget -q --timeout=30 -O "${tmp_dir}/store.sh" "${raw_url}/store.sh" 2>/dev/null || fail=1
     wget -q --timeout=30 -O "${tmp_dir}/install.sh" "${raw_url}/install.sh" 2>/dev/null || true
 
-    for f in network.sh github.sh install.sh ui.sh; do
+    for f in network.sh github.sh install.sh version.sh registry.sh manager.sh ui.sh; do
         wget -q --timeout=30 -O "${tmp_dir}/core/${f}" "${raw_url}/core/${f}" 2>/dev/null || true
     done
 
@@ -360,7 +368,7 @@ update_store() {
         cp -f "${tmp_dir}/${f}" "${SCRIPT_DIR}/${f}" 2>/dev/null || { echo "[错误] ${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 
-    for f in network.sh github.sh install.sh ui.sh; do
+    for f in network.sh github.sh install.sh version.sh registry.sh manager.sh ui.sh; do
         cp -f "${tmp_dir}/core/${f}" "${SCRIPT_DIR}/core/${f}" 2>/dev/null || { echo "[错误] core/${f} 复制失败"; rm -rf "$tmp_dir"; sleep 2; return; }
     done
 
@@ -492,6 +500,7 @@ init() {
     echo "[架构] $arch"
 
     init_cache
+    init_version_db
     echo "[初始化] 缓存目录就绪"
     echo ""
 }

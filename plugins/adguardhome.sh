@@ -43,10 +43,7 @@ install_adguardhome() {
         opkg install luci-compat 2>/dev/null
     fi
 
-    echo "[修复] 修复依赖..."
     fix_dependencies
-
-    echo "[重启] 重启 LuCI..."
     restart_luci
 
     echo "[成功] AdGuardHome 安装完成"
@@ -62,6 +59,7 @@ install_adguardhome() {
     echo "注意：/usr/bin/AdGuardHome 是只读目录，不可用作工作目录！"
     echo ""
 
+    save_version "adguardhome" "installed"
     show_success
 }
 
@@ -147,7 +145,6 @@ install_adguardhome_core_github() {
     rm -rf "$extract_dir"
     rm -f "$tar_file"
 
-    echo "[配置] 创建初始化脚本..."
     cat > /etc/init.d/adguardhome << 'INITEOF'
 #!/bin/sh /etc/rc.common
 START=95
@@ -224,8 +221,6 @@ install_adguardhome_luci_github() {
             echo "[警告] 中文包下载失败，将只安装主包"
             i18n_url=""
         fi
-    else
-        echo "[警告] 未找到中文包，将只安装主包"
     fi
 
     echo "[安装] 正在安装 LuCI 界面..."
@@ -280,7 +275,6 @@ uninstall_adguardhome() {
         /etc/init.d/adguardhome disable 2>/dev/null
     fi
 
-    echo "[卸载] 正在卸载 AdGuardHome..."
     . /etc/openwrt_release 2>/dev/null
     local release_ver
     release_ver=$(echo "$DISTRIB_RELEASE" | cut -d'.' -f1,2)
@@ -304,9 +298,8 @@ uninstall_adguardhome() {
     rm -rf /usr/share/AdGuardHome
     rm -rf /tmp/luci-* 2>/dev/null
 
-    echo "[重启] 重启 LuCI..."
+    remove_version "adguardhome"
     restart_luci
-
     show_success
 }
 

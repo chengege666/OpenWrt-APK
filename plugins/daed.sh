@@ -12,11 +12,8 @@ install_daed_deps() {
         25.*|snapshot) is_apk=1 ;;
     esac
 
-    # daed 官方声明的运行时依赖
     local pkgs="ca-bundle curl zoneinfo-asia luci-compat"
-    # 内核模块（需匹配运行内核）
     local kmods="kmod-sched-core kmod-sched-bpf kmod-veth"
-    # GeoIP/GeoSite（.run 包内置，但以防万一也从源安装）
     local geos="v2ray-geoip v2ray-geosite"
 
     if [ "$is_apk" -eq 1 ]; then
@@ -35,11 +32,6 @@ install_daed_deps() {
         echo "[依赖] 安装系统依赖包..."
         opkg install $pkgs $kmods $geos 2>/dev/null || true
     fi
-
-    echo "[依赖] 尝试加载内核模块..."
-    for m in sched-core sched-bpf veth; do
-        modprobe "$m" 2>/dev/null && echo "[依赖] $m 已加载" || echo "[提示] $m 模块不可用（若内核不支持可忽略）"
-    done
 
     echo "[依赖] 依赖检查完成"
 }
@@ -65,8 +57,7 @@ install_daed() {
     echo "[架构] $arch"
 
     case "$arch" in
-        x86_64|aarch64)
-            ;;
+        x86_64|aarch64) ;;
         *)
             echo "[错误] Daed 目前仅支持 x86_64 和 aarch64 架构"
             return 1
@@ -75,9 +66,9 @@ install_daed() {
 
     install_daed_deps
 
-    local owner="wkccd"
-    local repo="luci-app-daed-runfiles"
-    local plugin_name="daed"
+    local owner repo
+    owner=$(get_plugin_owner "daed")
+    repo=$(get_plugin_repo "daed")
 
     local release_json
     release_json=$(get_latest_release "$owner" "$repo") || return 1
@@ -89,22 +80,18 @@ install_daed() {
     local all_urls
     all_urls=$(get_download_urls "$release_json")
 
-    # 选择对应版本前缀: 24.10 选 24-, 25.12/snapshot 选 25-
     local ver_prefix="24"
     [ "$is_apk" -eq 1 ] && ver_prefix="25"
 
-    # 架构映射
     local run_arch
     case "$arch" in
         x86_64) run_arch="x86-64" ;;
         aarch64) run_arch="aarch64_generic" ;;
     esac
 
-    # 查找匹配的 .run 文件
     local run_url
     run_url=$(echo "$all_urls" | grep "${ver_prefix}-luci-app-dead" | grep "${run_arch}\.run$" | head -1)
 
-    # aarch64 通用没找到则尝试 cortex-a53
     if [ -z "$run_url" ] && [ "$arch" = "aarch64" ]; then
         echo "[重试] 未找到 aarch64_generic，尝试 aarch64_cortex-a53..."
         run_url=$(echo "$all_urls" | grep "${ver_prefix}-luci-app-dead" | grep "aarch64_cortex-a53\.run$" | head -1)
@@ -118,7 +105,7 @@ install_daed() {
         return 1
     fi
 
-    local download_dir="${CACHE_DIR}/${plugin_name}"
+    local download_dir="${CACHE_DIR}/daed"
     rm -rf "$download_dir"
     mkdir -p "${download_dir}/extracted"
 
@@ -142,10 +129,6 @@ install_daed() {
 
     rm -f "${download_dir}/${run_name}"
 
-    echo "[信息] 解压内容:"
-    ls -la "${download_dir}/extracted/" 2>/dev/null | grep -v "^total" | sed 's/^/  /'
-
-    # 分别收集 APK 和 IPK 文件
     local apk_files
     apk_files=$(find "${download_dir}/extracted" -name "*.apk" 2>/dev/null)
     local ipk_files
@@ -185,10 +168,8 @@ install_daed() {
 
     echo "[成功] 安装完成"
 
-    echo "[修复] 修复依赖..."
     fix_dependencies
 
-    # 检测并启用 dae/daed 服务
     local svc_name=""
     for s in daed dae; do
         if [ -f "/etc/init.d/$s" ]; then
@@ -204,9 +185,8 @@ install_daed() {
         echo "[提示] 未检测到 dae/daed 服务脚本，安装后请在 LuCI 中手动启用"
     fi
 
-    echo "[重启] 重启 LuCI..."
     restart_luci
-
+    save_version "daed" "$tag"
     show_success
 }
 
@@ -230,19 +210,14 @@ uninstall_daed() {
     uninstall_plugin "daed"
     uninstall_plugin "dae"
 
-    echo "[重启] 重启 LuCI..."
+    remove_version "daed"
     restart_luci
-
     show_success
 }
 
 update_daed() {
-    echo ""
-    echo "================================"
-    echo " 更新 Daed (大鹅)"
-    echo "================================"
-    echo ""
-
-    cleanup_old_cache
-    install_daed
+    local owner repo
+    owner=$(get_plugin_owner "daed")
+    repo=$(get_plugin_repo "daed")
+    manager_update "daed" "$owner" "$repo" install_daed
 }
