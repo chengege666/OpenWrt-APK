@@ -31,6 +31,7 @@ show_install_plugin_menu() {
     echo "8.   TaskPlan 定时任务"
     echo "9.   PassWall2"
     echo "10.  SmartDNS"
+    echo "11.  Daed (大鹅)"
     echo "0.   返回上级"
     echo ""
 }
@@ -70,6 +71,7 @@ show_uninstall_menu() {
     echo "8.  卸载 TaskPlan"
     echo "9.  卸载 PassWall2"
     echo "10. 卸载 SmartDNS"
+    echo "11. 卸载 Daed"
     echo "0.  返回上级"
     echo ""
 }
@@ -89,7 +91,8 @@ show_update_menu() {
     echo "8.  更新 TaskPlan"
     echo "9.  更新 PassWall2"
     echo "10. 更新 SmartDNS"
-    echo "11. 更新全部"
+    echo "11. 更新 Daed"
+    echo "12. 更新全部"
     echo "0.  返回上级"
     echo ""
 }

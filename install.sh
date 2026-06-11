@@ -48,6 +48,7 @@ download_file "${RAW_URL}/plugins/lucky.sh" "${INSTALL_DIR}/plugins/lucky.sh" &&
 download_file "${RAW_URL}/plugins/luci-theme-argon.sh" "${INSTALL_DIR}/plugins/luci-theme-argon.sh" && echo "[下载] plugins/luci-theme-argon.sh" || { echo "[错误] plugins/luci-theme-argon.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/taskplan.sh" "${INSTALL_DIR}/plugins/taskplan.sh" && echo "[下载] plugins/taskplan.sh" || { echo "[错误] plugins/taskplan.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/passwall2.sh" "${INSTALL_DIR}/plugins/passwall2.sh" && echo "[下载] plugins/passwall2.sh" || { echo "[错误] plugins/passwall2.sh 下载失败"; exit 1; }
+download_file "${RAW_URL}/plugins/daed.sh" "${INSTALL_DIR}/plugins/daed.sh" && echo "[下载] plugins/daed.sh" || { echo "[错误] plugins/daed.sh 下载失败"; exit 1; }
 download_file "${RAW_URL}/plugins/smartdns.sh" "${INSTALL_DIR}/plugins/smartdns.sh" && echo "[下载] plugins/smartdns.sh" || { echo "[错误] plugins/smartdns.sh 下载失败"; exit 1; }
 
 chmod +x "${INSTALL_DIR}/store.sh"
