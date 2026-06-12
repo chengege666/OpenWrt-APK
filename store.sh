@@ -18,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/passwall2.sh"
 . "${SCRIPT_DIR}/plugins/daed.sh"
 [ -f "${SCRIPT_DIR}/plugins/smartdns.sh" ] && . "${SCRIPT_DIR}/plugins/smartdns.sh"
+[ -f "${SCRIPT_DIR}/plugins/adguardhome.sh" ] && . "${SCRIPT_DIR}/plugins/adguardhome.sh"
 
 TTY="/dev/tty"
 
@@ -112,6 +113,10 @@ install_plugin_menu() {
                 install_daed
                 wait_for_enter
                 ;;
+            11)
+                install_adguardhome
+                wait_for_enter
+                ;;
             0)
                 return
                 ;;
@@ -168,6 +173,10 @@ uninstall_menu() {
                 ;;
             10)
                 uninstall_daed
+                wait_for_enter
+                ;;
+            11)
+                uninstall_adguardhome
                 wait_for_enter
                 ;;
             0)
@@ -229,6 +238,10 @@ update_menu() {
                 wait_for_enter
                 ;;
             11)
+                update_adguardhome
+                wait_for_enter
+                ;;
+            12)
                 update_all
                 wait_for_enter
                 ;;
@@ -259,6 +272,7 @@ update_all() {
     update_lucky
     update_smartdns
     update_daed
+    update_adguardhome
 
     echo ""
     echo "================================"
