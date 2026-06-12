@@ -31,7 +31,6 @@ show_install_plugin_menu() {
     echo "8.   PassWall2"
     echo "9.   SmartDNS"
     echo "10.  Daed (大鹅)"
-    echo "11.  AdGuardHome"
     echo "0.   返回上级"
     echo ""
 }
@@ -61,8 +60,8 @@ show_uninstall_menu() {
     echo " 卸载插件"
     echo "================================"
     echo ""
-    echo "1.   卸载 OpenClash"
-    echo "2.   卸载 MosDNS"
+    echo "1.  卸载 OpenClash"
+    echo "2.  卸载 MosDNS"
     echo "3.   卸载 Docker"
     echo "4.   卸载 Aurora 主题"
     echo "5.   卸载 Lucky"
@@ -71,8 +70,7 @@ show_uninstall_menu() {
     echo "8.   卸载 PassWall2"
     echo "9.   卸载 SmartDNS"
     echo "10.  卸载 Daed"
-    echo "11.  卸载 AdGuardHome"
-    echo "0.   返回上级"
+    echo "0.  返回上级"
     echo ""
 }
 
@@ -81,8 +79,8 @@ show_update_menu() {
     echo " 更新插件"
     echo "================================"
     echo ""
-    echo "1.   更新 OpenClash"
-    echo "2.   更新 MosDNS"
+    echo "1.  更新 OpenClash"
+    echo "2.  更新 MosDNS"
     echo "3.   更新 Docker"
     echo "4.   更新 Aurora 主题"
     echo "5.   更新 Lucky"
@@ -91,9 +89,8 @@ show_update_menu() {
     echo "8.   更新 PassWall2"
     echo "9.   更新 SmartDNS"
     echo "10.  更新 Daed"
-    echo "11.  更新 AdGuardHome"
-    echo "12.  更新全部"
-    echo "0.   返回上级"
+    echo "11.  更新全部"
+    echo "0.  返回上级"
     echo ""
 }
 

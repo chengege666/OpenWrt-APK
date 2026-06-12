@@ -2,8 +2,6 @@
 # core/github.sh - GitHub Releases API 模块
 
 # 内部函数：通过镜像获取 GitHub API 响应
-# 要求响应必须是 JSON (以 { 开头),否则视为镜像失败,回退直连
-# 提示信息走 stderr,避免污染 stdout 的 JSON 数据
 _fetch_github_api() {
     local url="$1"
     local desc="$2"
@@ -12,25 +10,15 @@ _fetch_github_api() {
     if [ -n "$GITHUB_MIRROR" ]; then
         local proxied_url="${GITHUB_MIRROR%/}/${url}"
         local response
-        response=$(wget -q --timeout=15 --header="User-Agent: apk-store" -O- "$proxied_url" 2>/dev/null)
-        # 校验: 非空 + 首字符是 { 才是合法 JSON
-        if [ -n "$response" ] && echo "$response" | head -c 1 | grep -q '{'; then
+        response=$(wget -q --timeout=15 -O- "$proxied_url" 2>/dev/null)
+        if [ -n "$response" ]; then
             echo "$response"
             return 0
         fi
-        echo "[警告] 镜像 API 响应无效 (非 JSON 或为空),尝试直连..." >&2
+        echo "[警告] 镜像 API 请求失败，尝试直连..."
     fi
 
-    # 直连
-    local direct_resp
-    direct_resp=$(wget -q --timeout=15 --header="User-Agent: apk-store" -O- "$url" 2>/dev/null)
-    if [ -n "$direct_resp" ] && echo "$direct_resp" | head -c 1 | grep -q '{'; then
-        echo "$direct_resp"
-        return 0
-    fi
-
-    # 都失败,返回空 + 非零退出
-    return 1
+    wget -q --timeout=15 -O- "$url" 2>/dev/null
 }
 
 get_latest_release() {
