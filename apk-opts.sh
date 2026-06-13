@@ -65,21 +65,24 @@ apk_set_untrusted() {
 # LuCI 网页上传安装补丁（只影响网页界面）
 # ============================================================
 
-# 查找 LuCI 包管理 Lua 文件（只找 .lua 文件，排除 .json）
+# 查找 LuCI 包管理 Lua 文件（只找 .lua 文件）
 luci_find_pkg_manager() {
-    # 精确搜索包含 apk 调用的 Lua 文件
+    # 搜索包含 apk 安装相关关键词的 Lua 文件
     local result
-    result=$(find /usr/lib/lua/luci /usr/share/luci -name "*.lua" -type f 2>/dev/null | xargs grep -l "apk" 2>/dev/null | head -1)
+    result=$(find /usr/lib/lua/luci /usr/share/luci -name "*.lua" -type f 2>/dev/null | \
+        xargs grep -l "apk" 2>/dev/null | \
+        grep -v "menu\.d" | head -1)
     [ -n "$result" ] && echo "$result" && return 0
 
-    # 备用：常见路径
-    for f in \
-        /usr/lib/lua/luci/controller/admin/system.lua \
-        /usr/lib/lua/luci/controller/admin/package-manager.lua \
-        /usr/lib/lua/luci/model/cbi/admin_system/packages.lua \
-        /usr/lib/lua/luci/view/admin_system/packages.htm; do
-        [ -f "$f" ] && echo "$f" && return 0
-    done
+    # 搜索包含 os.execute 或 luci.sys 调用 apk 的文件
+    result=$(find /usr/lib/lua/luci -name "*.lua" -type f 2>/dev/null | \
+        xargs grep -l "os\.execute\|luci\.sys" 2>/dev/null | \
+        xargs grep -l "apk\|install\|upload" 2>/dev/null | head -1)
+    [ -n "$result" ] && echo "$result" && return 0
+
+    # 搜索 package-manager 相关的 Lua 文件
+    result=$(find /usr/lib/lua/luci -name "*package*" -name "*.lua" -type f 2>/dev/null | head -1)
+    [ -n "$result" ] && echo "$result" && return 0
 
     return 1
 }
