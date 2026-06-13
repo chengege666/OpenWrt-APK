@@ -79,6 +79,8 @@ bash <(curl -sL https://lj.1231818.xyz/kg)
 wget -qO- https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/apk-opts.sh | sh
 ```
 
+> 注：OpenWrt 默认无 bash，需先安装 `opkg install bash`，或使用下方 wget 方式
+
 ### 命令行使用
 
 ```sh

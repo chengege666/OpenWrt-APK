@@ -101,7 +101,7 @@ apk_toggle_menu() {
 # 命令行入口
 # ============================================================
 case "$0" in
-    */apk-opts.sh|apk-opts.sh)
+    */apk-opts.sh|apk-opts.sh|/dev/fd/*)
         apk_opts_init
 
         case "${1:-}" in
