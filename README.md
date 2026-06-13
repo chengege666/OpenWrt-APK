@@ -69,14 +69,9 @@ OpenWrt-APK/
 
 ### 一键安装
 
-短链接
-```
-bash <(curl -sL https://lj.1231818.xyz/kg)
- ```
- 
 ```sh
- wget -qO /tmp/apk-opts.sh https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/apk-opts.sh && sh /tmp/apk-opts.sh
- ```
+wget -qO- https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/apk-opts.sh | sh
+```
 
 ### 命令行使用
 

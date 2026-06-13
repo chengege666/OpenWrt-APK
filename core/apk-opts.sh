@@ -77,7 +77,7 @@ apk_toggle_menu() {
     echo "  0. 返回"
     echo ""
     printf "  请选择: "
-    read -r choice
+    read -r choice < /dev/tty 2>/dev/null || read -r choice
     choice=$(echo "$choice" | tr -d '\r\n ')
 
     case "$choice" in
