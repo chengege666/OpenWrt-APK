@@ -75,7 +75,7 @@ bash <(curl -sL https://lj.1231818.xyz/kg)
  ```
  
 ```sh
- wget -qO- https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/apk-opts.sh | sh
+ wget -qO /tmp/apk-opts.sh https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/apk-opts.sh && sh /tmp/apk-opts.sh
  ```
 
 ### 命令行使用
