@@ -65,19 +65,23 @@ apk_set_untrusted() {
 # LuCI 网页上传安装补丁（只影响网页界面）
 # ============================================================
 
-# 查找 LuCI 包管理 Lua 文件
+# 查找 LuCI 包管理 Lua 文件（只找 .lua 文件，排除 .json）
 luci_find_pkg_manager() {
-    local candidates="
-/usr/lib/lua/luci/controller/admin/system.lua
-/usr/lib/lua/luci/controller/admin/package-manager.lua
-/usr/lib/lua/luci/model/cbi/admin_system/packages.lua
-/usr/share/luci/menu.d/luci-app-package-manager.json
-"
-    for f in $candidates; do
+    # 精确搜索包含 apk 调用的 Lua 文件
+    local result
+    result=$(find /usr/lib/lua/luci /usr/share/luci -name "*.lua" -type f 2>/dev/null | xargs grep -l "apk" 2>/dev/null | head -1)
+    [ -n "$result" ] && echo "$result" && return 0
+
+    # 备用：常见路径
+    for f in \
+        /usr/lib/lua/luci/controller/admin/system.lua \
+        /usr/lib/lua/luci/controller/admin/package-manager.lua \
+        /usr/lib/lua/luci/model/cbi/admin_system/packages.lua \
+        /usr/lib/lua/luci/view/admin_system/packages.htm; do
         [ -f "$f" ] && echo "$f" && return 0
     done
-    # 模糊搜索
-    find /usr/lib/lua/luci -name "*.lua" -type f 2>/dev/null | xargs grep -l "apk add" 2>/dev/null | head -1
+
+    return 1
 }
 
 # 给 LuCI 包管理器打补丁，添加 --allow-untrusted
