@@ -86,7 +86,7 @@ apk_toggle_menu() {
     echo " --allow-untrusted 开关设置"
     echo "================================"
     echo ""
-    if [ "$ALLOW_UNTRUSTED" = "true" ] || [ "$pkg_on" -eq 1 ]; then
+    if [ "$pkg_on" -eq 1 ]; then
         echo "  当前状态: 开启"
     else
         echo "  当前状态: 关闭"
