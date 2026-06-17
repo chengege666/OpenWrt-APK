@@ -1,36 +1,6 @@
 #!/bin/sh
 # core/ui.sh - 用户界面模块
 
-# 颜色定义
-GREEN='\033[32m'
-NC='\033[0m'
-
-# 缓存已安装包列表（避免重复查询）
-_INSTALLED_CACHE=""
-_load_installed_cache() {
-    if [ -z "$_INSTALLED_CACHE" ]; then
-        _INSTALLED_CACHE="$(apk info 2>/dev/null; opkg list-installed 2>/dev/null | cut -d' ' -f1)"
-    fi
-}
-
-# 检测插件是否已安装
-_is_installed() {
-    local pkg="$1"
-    _load_installed_cache
-    echo "$_INSTALLED_CACHE" | grep -qx "$pkg"
-}
-
-# 根据安装状态输出带颜色的文本（无换行）
-_ci() {
-    local pkg="$1"
-    local text="$2"
-    if _is_installed "$pkg"; then
-        printf '\033[32m%s\033[0m' "$text"
-    else
-        printf '%s' "$text"
-    fi
-}
-
 show_main_menu() {
     echo "================================"
     echo " OpenWrt APK Store"
@@ -51,21 +21,14 @@ show_install_plugin_menu() {
     echo " 安装插件"
     echo "================================"
     echo ""
-    _ci "luci-app-openclash" "1.  OpenClash             "; _ci "luci-app-argon-config" "6.  Argon 主题"
-    echo ""
-    _ci "luci-app-mosdns" "2.  MosDNS                "; _ci "luci-app-taskplan" "7.  TaskPlan"
-    echo ""
-    _ci "docker" "3.  Docker                "; _ci "luci-app-passwall2" "8.  PassWall2"
-    echo ""
-    _ci "luci-theme-aurora" "4.  Aurora 主题           "; _ci "luci-app-smartdns" "9.  SmartDNS"
-    echo ""
-    _ci "luci-app-lucky" "5.  Lucky                 "; _ci "luci-app-daed" "10. Daed"
-    echo ""
-    _ci "luci-app-store" "11. iStore                "; _ci "luci-app-diskman" "12. DiskMan"
-    echo ""
-    _ci "luci-app-wechatpush" "13. WeChatPush"
-    echo ""
-    echo "0.  返回上级"
+    echo -e "  1.  OpenClash              6.  Argon 主题"
+    echo -e "  2.  MosDNS                 7.  TaskPlan"
+    echo -e "  3.  Docker                 8.  PassWall2"
+    echo -e "  4.  Aurora 主题            9.  SmartDNS"
+    echo -e "  5.  Lucky                  10. Daed"
+    echo -e "  11. iStore                 12. DiskMan"
+    echo -e "  13. WeChatPush"
+    echo -e "  0.  返回上级"
     echo ""
 }
 
@@ -94,20 +57,13 @@ show_uninstall_menu() {
     echo " 卸载插件"
     echo "================================"
     echo ""
-    _ci "luci-app-openclash" "1.  卸载 OpenClash        "; _ci "luci-app-argon-config" "6.  卸载 Argon 主题"
-    echo ""
-    _ci "luci-app-mosdns" "2.  卸载 MosDNS           "; _ci "luci-app-taskplan" "7.  卸载 TaskPlan"
-    echo ""
-    _ci "docker" "3.  卸载 Docker           "; _ci "luci-app-passwall2" "8.  卸载 PassWall2"
-    echo ""
-    _ci "luci-theme-aurora" "4.  卸载 Aurora 主题      "; _ci "luci-app-smartdns" "9.  卸载 SmartDNS"
-    echo ""
-    _ci "luci-app-lucky" "5.  卸载 Lucky            "; _ci "luci-app-daed" "10. 卸载 Daed"
-    echo ""
-    _ci "luci-app-store" "11. 卸载 iStore           "; _ci "luci-app-diskman" "12. 卸载 DiskMan"
-    echo ""
-    _ci "luci-app-wechatpush" "13. 卸载 WeChatPush"
-    echo ""
+    echo -e "  1.  卸载 OpenClash         6.  卸载 Argon 主题"
+    echo -e "  2.  卸载 MosDNS            7.  卸载 TaskPlan"
+    echo -e "  3.  卸载 Docker            8.  卸载 PassWall2"
+    echo -e "  4.  卸载 Aurora 主题       9.  卸载 SmartDNS"
+    echo -e "  5.  卸载 Lucky             10. 卸载 Daed"
+    echo -e "  11. 卸载 iStore            12. 卸载 DiskMan"
+    echo -e "  13. 卸载 WeChatPush"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -117,20 +73,13 @@ show_update_menu() {
     echo " 更新插件"
     echo "================================"
     echo ""
-    _ci "luci-app-openclash" "1.  更新 OpenClash        "; _ci "luci-app-argon-config" "6.  更新 Argon 主题"
-    echo ""
-    _ci "luci-app-mosdns" "2.  更新 MosDNS           "; _ci "luci-app-taskplan" "7.  更新 TaskPlan"
-    echo ""
-    _ci "docker" "3.  更新 Docker           "; _ci "luci-app-passwall2" "8.  更新 PassWall2"
-    echo ""
-    _ci "luci-theme-aurora" "4.  更新 Aurora 主题      "; _ci "luci-app-smartdns" "9.  更新 SmartDNS"
-    echo ""
-    _ci "luci-app-lucky" "5.  更新 Lucky            "; _ci "luci-app-daed" "10. 更新 Daed"
-    echo ""
-    _ci "luci-app-store" "11. 更新 iStore           "; _ci "luci-app-diskman" "12. 更新 DiskMan"
-    echo ""
-    _ci "luci-app-wechatpush" "13. 更新 WeChatPush"
-    echo ""
+    echo -e "  1.  更新 OpenClash         6.  更新 Argon 主题"
+    echo -e "  2.  更新 MosDNS            7.  更新 TaskPlan"
+    echo -e "  3.  更新 Docker            8.  更新 PassWall2"
+    echo -e "  4.  更新 Aurora 主题       9.  更新 SmartDNS"
+    echo -e "  5.  更新 Lucky             10. 更新 Daed"
+    echo -e "  11. 更新 iStore            12. 更新 DiskMan"
+    echo -e "  13. 更新 WeChatPush"
     echo -e "  14. 更新全部"
     echo -e "  0.  返回上级"
     echo ""
