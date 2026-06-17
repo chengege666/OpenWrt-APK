@@ -12,26 +12,8 @@ install_passwall() {
     local repo="openwrt-passwall"
     local plugin_name="passwall"
 
-    echo "[依赖] 检查 PassWall 运行依赖..."
     echo "[更新] 更新软件源索引..."
     apk update 2>/dev/null || true
-
-    local deps="dns2socks microsocks ipt2socks tcping pdnsd-alt chinadns-ng haveged"
-    local missing_deps=""
-    for pkg in $deps; do
-        if apk info -e "$pkg" >/dev/null 2>&1; then
-            echo "[依赖] $pkg 已安装"
-        else
-            echo "[依赖] 安装 $pkg..."
-            if ! apk add --allow-untrusted "$pkg" 2>/dev/null; then
-                missing_deps="$missing_deps $pkg"
-            fi
-        fi
-    done
-    if [ -n "$missing_deps" ]; then
-        echo "[警告] 以下依赖未安装（可能不在软件源中）:$missing_deps"
-        echo "[提示] 如需完整功能，请自行添加 passwall 软件源后重试"
-    fi
 
     local release_json
     release_json=$(get_latest_release "$owner" "$repo") || return 1
@@ -126,41 +108,26 @@ install_passwall() {
         esac
     done
 
-    local install_ok=0
-    if [ -n "$apk_files" ]; then
-        echo "[安装] 批量安装 APK 包..."
-        if apk add --allow-untrusted --force-overwrite $apk_files; then
-            install_ok=1
-        else
-            echo "[重试] 依赖缺失，尝试跳过依赖安装..."
-            local apk_opts=""
-            for f in $apk_files; do
-                if apk add --allow-untrusted --force-overwrite --force-depends "$f"; then
-                    install_ok=1
-                fi
-            done
-        fi
-        if [ "$install_ok" -eq 0 ]; then
-            echo "[重试] 尝试逐个安装..."
-            for f in $apk_files; do
-                echo "[安装] 安装 $(basename "$f")..."
-                if apk add --allow-untrusted --force-overwrite "$f"; then
-                    install_ok=1
-                fi
-            done
-        fi
-    fi
-    if [ -n "$ipk_files" ]; then
-        for f in $ipk_files; do
-            echo "[安装] 安装 $(basename "$f")..."
-            if opkg install --force-overwrite "$f"; then
-                install_ok=1
-            fi
-        done
-    fi
+    if [ -n "$apk_files" ] && apk add --allow-untrusted --force-overwrite $apk_files; then
+        echo "[成功] PassWall 安装完成"
+    elif [ -n "$ipk_files" ] && opkg install --force-overwrite $ipk_files; then
+        echo "[成功] PassWall 安装完成"
+    else
+        cat <<'EOF'
+[错误] PassWall 安装失败。
 
-    if [ "$install_ok" -eq 0 ]; then
-        echo "[错误] 安装失败"
+原因：luci-app-passwall 依赖 dns2socks、ipt2socks 等包，
+这些包不在标准 OpenWrt 软件源中。
+
+解决方法：
+1. 添加 PassWall 构建源后重试：
+   apk add --allow-untrusted dns2socks ipt2socks pdnsd-alt
+   或 opkg install dns2socks ipt2socks pdnsd-alt
+
+2. 如需完整功能，请手动添加 passwall 软件源：
+   https://github.com/moetayuko/openwrt-passwall-build
+
+EOF
         return 1
     fi
 
