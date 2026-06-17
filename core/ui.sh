@@ -26,6 +26,8 @@ show_install_plugin_menu() {
     echo -e "  3.  Docker                 8.  PassWall2"
     echo -e "  4.  Aurora 主题            9.  SmartDNS"
     echo -e "  5.  Lucky                  10. Daed"
+    echo -e "  11. iStore                 12. DiskMan"
+    echo -e "  13. WeChatPush"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -60,6 +62,8 @@ show_uninstall_menu() {
     echo -e "  3.  卸载 Docker            8.  卸载 PassWall2"
     echo -e "  4.  卸载 Aurora 主题       9.  卸载 SmartDNS"
     echo -e "  5.  卸载 Lucky             10. 卸载 Daed"
+    echo -e "  11. 卸载 iStore            12. 卸载 DiskMan"
+    echo -e "  13. 卸载 WeChatPush"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -74,7 +78,9 @@ show_update_menu() {
     echo -e "  3.  更新 Docker            8.  更新 PassWall2"
     echo -e "  4.  更新 Aurora 主题       9.  更新 SmartDNS"
     echo -e "  5.  更新 Lucky             10. 更新 Daed"
-    echo -e "  11. 更新全部"
+    echo -e "  11. 更新 iStore            12. 更新 DiskMan"
+    echo -e "  13. 更新 WeChatPush"
+    echo -e "  14. 更新全部"
     echo -e "  0.  返回上级"
     echo ""
 }

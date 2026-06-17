@@ -18,6 +18,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/passwall2.sh"
 . "${SCRIPT_DIR}/plugins/daed.sh"
 [ -f "${SCRIPT_DIR}/plugins/smartdns.sh" ] && . "${SCRIPT_DIR}/plugins/smartdns.sh"
+[ -f "${SCRIPT_DIR}/plugins/istore.sh" ] && . "${SCRIPT_DIR}/plugins/istore.sh"
+[ -f "${SCRIPT_DIR}/plugins/luci-app-diskman.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-diskman.sh"
+[ -f "${SCRIPT_DIR}/plugins/luci-app-wechatpush.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-wechatpush.sh"
 
 TTY="/dev/tty"
 
@@ -112,6 +115,18 @@ install_plugin_menu() {
                 install_daed
                 wait_for_enter
                 ;;
+            11)
+                install_istore
+                wait_for_enter
+                ;;
+            12)
+                install_diskman
+                wait_for_enter
+                ;;
+            13)
+                install_wechatpush
+                wait_for_enter
+                ;;
             0)
                 return
                 ;;
@@ -168,6 +183,18 @@ uninstall_menu() {
                 ;;
             10)
                 uninstall_daed
+                wait_for_enter
+                ;;
+            11)
+                uninstall_istore
+                wait_for_enter
+                ;;
+            12)
+                uninstall_diskman
+                wait_for_enter
+                ;;
+            13)
+                uninstall_wechatpush
                 wait_for_enter
                 ;;
             0)
@@ -229,6 +256,18 @@ update_menu() {
                 wait_for_enter
                 ;;
             11)
+                update_istore
+                wait_for_enter
+                ;;
+            12)
+                update_diskman
+                wait_for_enter
+                ;;
+            13)
+                update_wechatpush
+                wait_for_enter
+                ;;
+            14)
                 update_all
                 wait_for_enter
                 ;;
@@ -259,6 +298,9 @@ update_all() {
     update_lucky
     update_smartdns
     update_daed
+    update_istore
+    update_diskman
+    update_wechatpush
 
     echo ""
     echo "================================"
