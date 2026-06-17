@@ -86,23 +86,38 @@ install_nikki() {
     pkg_count=$(echo "$pkg_files" | wc -l)
     echo "[安装] 正在安装 $pkg_count 个包..."
 
-    local install_ok=0
+    local apk_files=""
+    local ipk_files=""
     for f in $pkg_files; do
         case "$f" in
-            *.apk)
-                echo "[安装] 安装 $(basename "$f")..."
-                if apk add --allow-untrusted --force-overwrite "$f" 2>/dev/null; then
-                    install_ok=1
-                fi
-                ;;
-            *.ipk)
-                echo "[安装] 安装 $(basename "$f")..."
-                if opkg install --force-overwrite "$f" 2>/dev/null; then
-                    install_ok=1
-                fi
-                ;;
+            *.apk) apk_files="$apk_files $f" ;;
+            *.ipk) ipk_files="$ipk_files $f" ;;
         esac
     done
+
+    local install_ok=0
+    if [ -n "$apk_files" ]; then
+        echo "[安装] 批量安装 APK 包..."
+        if apk add --allow-untrusted --force-overwrite $apk_files; then
+            install_ok=1
+        else
+            echo "[错误] 批量安装失败，尝试逐个安装..."
+            for f in $apk_files; do
+                echo "[安装] 安装 $(basename "$f")..."
+                if apk add --allow-untrusted --force-overwrite "$f"; then
+                    install_ok=1
+                fi
+            done
+        fi
+    fi
+    if [ -n "$ipk_files" ]; then
+        for f in $ipk_files; do
+            echo "[安装] 安装 $(basename "$f")..."
+            if opkg install --force-overwrite "$f"; then
+                install_ok=1
+            fi
+        done
+    fi
 
     if [ "$install_ok" -eq 0 ]; then
         echo "[错误] 安装失败"
