@@ -2,31 +2,23 @@
 # plugins/passwall.sh - PassWall 科学上网插件模块
 
 # 从 SourceForge 下载指定包
+# 参数：页面URL、匹配模式、输出目录
 _download_sf_pkg() {
-    local sf_dir="$1"
+    local sf_page_url="$1"
     local pkg_pattern="$2"
     local output_dir="$3"
 
     local page
-    page=$(wget -q --timeout=15 --user-agent="OpenWrt-APK-Store/1.0" -O- "${sf_dir}" 2>/dev/null)
+    page=$(wget -q --timeout=15 --user-agent="OpenWrt-APK-Store/1.0" -O- "${sf_page_url}" 2>/dev/null)
     [ -z "$page" ] && return 1
 
-    # 从 HTML 解析 .apk 文件的下载链接
-    local dl_path
-    dl_path=$(echo "$page" | grep -o '/projects/openwrt-passwall-build/files/[^"'"'"']*'"${pkg_pattern}"'[^"'"'"']*\.apk[^"'"'"']*' | head -1)
-    [ -z "$dl_path" ] && return 1
-
-    # 去掉尾部查询参数（?xxx）
-    dl_path=$(echo "$dl_path" | sed 's/\?.*//')
-    # 去掉尾部 /stats/timeline
-    dl_path=$(echo "$dl_path" | sed 's|/stats/timeline$||')
-
+    # 从 HTML 提取文件名
     local filename
-    # 从路径中提取文件名（最后一个 / 和 .apk 之间的部分）
-    filename=$(echo "$dl_path" | sed 's|.*/\([^/]*\.apk\).*|\1|')
+    filename=$(echo "$page" | grep -o "${pkg_pattern}[^\"/<]*\.apk" | head -1)
     [ -z "$filename" ] && return 1
 
-    local dl_url="https://sourceforge.net${dl_path}"
+    # 构造下载 URL（SourceForge 真实下载链接需加 /download 后缀）
+    local dl_url="${sf_page_url}${filename}/download"
     if ! download_file "$dl_url" "${output_dir}/${filename}"; then
         return 1
     fi
@@ -35,23 +27,23 @@ _download_sf_pkg() {
 }
 
 # 从 SourceForge passwall_packages 下载所有依赖包
+# 参数：SourceForge 基础路径（如 releases/packages-25.12/x86_64/passwall_packages/）
 _download_passwall_deps() {
-    local sf_base="$1"
+    local sf_base_url="$1"
     local output_dir="$2"
     local deps="dns2socks ipt2socks pdnsd-alt microsocks tcping chinadns-ng haveged"
-    local downloaded=""
     local count=0
 
     for dep in $deps; do
         local file
-        file=$(_download_sf_pkg "${sf_base}" "${dep}" "${output_dir}")
+        file=$(_download_sf_pkg "${sf_base_url}" "${dep}" "${output_dir}")
         if [ -n "$file" ] && [ -f "$file" ]; then
-            downloaded="$downloaded $file"
             count=$((count + 1))
+            echo "[依赖] 已下载: $(basename "$file")"
         fi
     done
 
-    echo "$downloaded"
+    echo "[依赖] 成功下载 $count 个依赖包"
     [ "$count" -gt 0 ]
 }
 
