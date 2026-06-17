@@ -12,6 +12,27 @@ install_passwall() {
     local repo="openwrt-passwall"
     local plugin_name="passwall"
 
+    echo "[依赖] 检查 PassWall 运行依赖..."
+    echo "[更新] 更新软件源索引..."
+    apk update 2>/dev/null || true
+
+    local deps="dns2socks microsocks ipt2socks tcping pdnsd-alt chinadns-ng haveged"
+    local missing_deps=""
+    for pkg in $deps; do
+        if apk info -e "$pkg" >/dev/null 2>&1; then
+            echo "[依赖] $pkg 已安装"
+        else
+            echo "[依赖] 安装 $pkg..."
+            if ! apk add --allow-untrusted "$pkg" 2>/dev/null; then
+                missing_deps="$missing_deps $pkg"
+            fi
+        fi
+    done
+    if [ -n "$missing_deps" ]; then
+        echo "[警告] 以下依赖未安装（可能不在软件源中）:$missing_deps"
+        echo "[提示] 如需完整功能，请自行添加 passwall 软件源后重试"
+    fi
+
     local release_json
     release_json=$(get_latest_release "$owner" "$repo") || return 1
 
