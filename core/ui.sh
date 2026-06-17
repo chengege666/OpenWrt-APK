@@ -9,7 +9,7 @@ NC='\033[0m'
 _INSTALLED_CACHE=""
 _load_installed_cache() {
     if [ -z "$_INSTALLED_CACHE" ]; then
-        _INSTALLED_CACHE="$(apk list --installed 2>/dev/null; opkg list-installed 2>/dev/null)"
+        _INSTALLED_CACHE="$(apk info 2>/dev/null; opkg list-installed 2>/dev/null | cut -d' ' -f1)"
     fi
 }
 
@@ -17,7 +17,7 @@ _load_installed_cache() {
 _is_installed() {
     local pkg="$1"
     _load_installed_cache
-    echo "$_INSTALLED_CACHE" | grep -q "^${pkg} "
+    echo "$_INSTALLED_CACHE" | grep -qx "$pkg"
 }
 
 # 根据安装状态输出带颜色的文本（无换行）
@@ -25,9 +25,9 @@ _ci() {
     local pkg="$1"
     local text="$2"
     if _is_installed "$pkg"; then
-        echo -ne "${GREEN}${text}${NC}"
+        printf '\033[32m%s\033[0m' "$text"
     else
-        echo -ne "${text}"
+        printf '%s' "$text"
     fi
 }
 
