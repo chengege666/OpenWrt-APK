@@ -65,7 +65,7 @@ show_install_plugin_menu() {
     echo ""
     _ci "luci-app-wechatpush" "13. WeChatPush"
     echo ""
-    echo -e "  0.  返回上级"
+    echo "0.  返回上级"
     echo ""
 }
 
