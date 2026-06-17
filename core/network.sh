@@ -48,13 +48,6 @@ download_file() {
         
         if wget -q --timeout=30 -O "$output" "$primary_url" 2>/dev/null; then
             if [ -f "$output" ] && [ -s "$output" ]; then
-                # 解码 URL 编码的文件名（如 %2B → +）
-                local decoded_output
-                decoded_output=$(echo "$output" | sed 's/%2B/+/g; s/%20/ /g')
-                if [ "$decoded_output" != "$output" ]; then
-                    mv "$output" "$decoded_output" 2>/dev/null
-                    output="$decoded_output"
-                fi
                 echo "[成功] 下载完成: $output"
                 return 0
             else
@@ -79,13 +72,6 @@ download_file() {
             
             if wget -q --timeout=30 -O "$output" "$fallback_url" 2>/dev/null; then
                 if [ -f "$output" ] && [ -s "$output" ]; then
-                    # 解码 URL 编码的文件名
-                    local decoded_output
-                    decoded_output=$(echo "$output" | sed 's/%2B/+/g; s/%20/ /g')
-                    if [ "$decoded_output" != "$output" ]; then
-                        mv "$output" "$decoded_output" 2>/dev/null
-                        output="$decoded_output"
-                    fi
                     echo "[成功] 下载完成: $output"
                     return 0
                 else
