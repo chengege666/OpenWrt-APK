@@ -1,39 +1,93 @@
 #!/bin/sh
 # core/github.sh - GitHub Releases API 模块
 
-# 内部函数：通过镜像获取 GitHub API 响应
+_GITHUB_UA="OpenWrt-APK-Store/1.0"
+
+# 内部函数：通过镜像获取 GitHub API 响应（带请求头）
 _fetch_github_api() {
     local url="$1"
     local desc="$2"
+    local response=""
 
     # 有镜像则走镜像
     if [ -n "$GITHUB_MIRROR" ]; then
         local proxied_url="${GITHUB_MIRROR%/}/${url}"
-        local response
-        response=$(wget -q --timeout=15 -O- "$proxied_url" 2>/dev/null)
+        response=$(wget -q --timeout=15 \
+            --user-agent="$_GITHUB_UA" \
+            --header="Accept: application/vnd.github+json" \
+            -O- "$proxied_url" 2>/dev/null)
         if [ -n "$response" ]; then
-            # 校验是否为有效 JSON（以 { 或 [ 开头）
             case "$response" in
-                [{\[]*)
-                    echo "$response"
-                    return 0
-                    ;;
+                [{\[]*) echo "$response"; return 0 ;;
             esac
-            echo "[警告] 镜像返回非 JSON 数据，尝试直连..."
+            echo "[警告] 镜像返回非 JSON 数据，尝试直连..." >&2
         fi
     fi
 
-    local response
+    # 直连带请求头
+    response=$(wget -q --timeout=15 \
+        --user-agent="$_GITHUB_UA" \
+        --header="Accept: application/vnd.github+json" \
+        -O- "$url" 2>/dev/null)
+    if [ -n "$response" ]; then
+        case "$response" in
+            [{\[]*) echo "$response"; return 0 ;;
+        esac
+    fi
+
+    # 不带请求头再试一次（兼容某些代理/镜像）
     response=$(wget -q --timeout=15 -O- "$url" 2>/dev/null)
     if [ -n "$response" ]; then
         case "$response" in
-            [{\[]*)
-                echo "$response"
-                return 0
-                ;;
+            [{\[]*) echo "$response"; return 0 ;;
         esac
     fi
+
     return 1
+}
+
+# 解析 JSON 字段（优先 jsonfilter，次选 jq，最后 sed）
+_json_get() {
+    local json="$1"
+    local expr="$2"
+
+    if command -v jsonfilter >/dev/null 2>&1; then
+        echo "$json" | jsonfilter -e "$expr" 2>/dev/null
+    elif command -v jq >/dev/null 2>&1; then
+        echo "$json" | jq -r "$expr" 2>/dev/null
+    else
+        return 1
+    fi
+}
+
+# 获取所有下载 URL（优先 jsonfilter，回退 sed）
+_get_urls_from_json() {
+    local json="$1"
+    local urls
+
+    urls=$(_json_get "$json" '@.assets[*].browser_download_url')
+    if [ -n "$urls" ]; then
+        echo "$urls"
+        return 0
+    fi
+
+    # sed 回退
+    echo "$json" | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p'
+}
+
+# HTML 回退：从 Release 页面解析下载链接
+_fetch_asset_urls_fallback() {
+    local owner="$1"
+    local repo="$2"
+    local tag="$3"
+
+    local html_url="https://github.com/${owner}/${repo}/releases/expanded_assets/${tag}"
+    local html
+    html=$(wget -q --timeout=15 --user-agent="$_GITHUB_UA" -O- "$html_url" 2>/dev/null)
+    [ -z "$html" ] && return 1
+
+    # 提取所有下载链接，拼接完整 URL
+    echo "$html" | grep -o '/[^"'"'"']*' | grep "/releases/download/" | sort -u | sed 's|^|https://github.com|'
 }
 
 get_latest_release() {
@@ -41,7 +95,7 @@ get_latest_release() {
     local repo="$2"
 
     if [ -z "$owner" ] || [ -z "$repo" ]; then
-        echo "[错误] 仓库信息不完整"
+        echo "[错误] 仓库信息不完整" >&2
         return 1
     fi
 
@@ -50,7 +104,7 @@ get_latest_release() {
     response=$(_fetch_github_api "$api_url" "Releases: $owner/$repo")
 
     if [ -z "$response" ]; then
-        echo "[错误] 无法获取 GitHub Releases: $owner/$repo"
+        echo "[错误] 无法获取 GitHub Releases: $owner/$repo" >&2
         return 1
     fi
 
@@ -63,7 +117,7 @@ get_latest_commit_sha() {
     local branch="${3:-main}"
 
     if [ -z "$owner" ] || [ -z "$repo" ]; then
-        echo "[错误] 仓库信息不完整"
+        echo "[错误] 仓库信息不完整" >&2
         return 1
     fi
 
@@ -72,35 +126,60 @@ get_latest_commit_sha() {
     response=$(_fetch_github_api "$api_url" "Commits: $owner/$repo")
 
     if [ -z "$response" ]; then
-        echo "[错误] 无法获取最新提交: $owner/$repo"
+        echo "[错误] 无法获取最新提交: $owner/$repo" >&2
         return 1
     fi
 
-    if command -v jq >/dev/null 2>&1; then
-        echo "$response" | jq -r '.sha' 2>/dev/null
-    else
-        echo "$response" | sed -n 's/ *"sha": *"\([a-f0-9]\{40\}\)".*/\1/p' | head -1
+    local sha
+    sha=$(_json_get "$response" '@.sha')
+    if [ -n "$sha" ]; then
+        echo "$sha"
+        return 0
     fi
+
+    # sed 回退
+    echo "$response" | sed -n 's/ *"sha": *"\([a-f0-9]\{40\}\)".*/\1/p' | head -1
 }
 
 get_release_tag() {
     local json="$1"
 
-    if command -v jq >/dev/null 2>&1; then
-        echo "$json" | jq -r '.tag_name' 2>/dev/null
-    else
-        echo "$json" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1
+    local tag
+    tag=$(_json_get "$json" '@.tag_name')
+    if [ -n "$tag" ]; then
+        echo "$tag"
+        return 0
     fi
+
+    # sed 回退
+    echo "$json" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1
 }
 
 get_download_urls() {
     local json="$1"
+    local owner="$2"
+    local repo="$3"
+    local tag="$4"
 
-    if command -v jq >/dev/null 2>&1; then
-        echo "$json" | jq -r '.assets[].browser_download_url' 2>/dev/null
-    else
-        echo "$json" | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p'
+    # 1. 优先从 JSON 提取
+    local urls
+    urls=$(_get_urls_from_json "$json")
+    if [ -n "$urls" ]; then
+        echo "$urls"
+        return 0
     fi
+
+    # 2. JSON 无数据，尝试 HTML 回退
+    if [ -n "$owner" ] && [ -n "$repo" ] && [ -n "$tag" ]; then
+        echo "[回退] 尝试从 Release 页面解析下载链接..." >&2
+        urls=$(_fetch_asset_urls_fallback "$owner" "$repo" "$tag")
+        if [ -n "$urls" ]; then
+            echo "$urls"
+            return 0
+        fi
+    fi
+
+    return 1
 }
 
 filter_apk_by_arch() {

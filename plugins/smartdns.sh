@@ -24,7 +24,7 @@ install_smartdns() {
     echo "[版本] $tag"
 
     local all_urls
-    all_urls=$(get_download_urls "$release_json")
+    all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
 
     local download_dir="${CACHE_DIR}/${plugin_name}"
     rm -rf "$download_dir"

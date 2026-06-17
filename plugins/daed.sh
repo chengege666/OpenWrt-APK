@@ -87,7 +87,7 @@ install_daed() {
     echo "[版本] $tag"
 
     local all_urls
-    all_urls=$(get_download_urls "$release_json")
+    all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
 
     # 选择对应版本前缀: 24.10 选 24-, 25.12/snapshot 选 25-
     local ver_prefix="24"

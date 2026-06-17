@@ -36,7 +36,7 @@ install_lucky() {
     echo "[版本] $tag"
 
     local all_urls
-    all_urls=$(get_download_urls "$release_json")
+    all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
 
     local tarball_url
     tarball_url=$(echo "$all_urls" | grep "${ver_prefix}-${arch}\.tar\.gz$" | head -1)

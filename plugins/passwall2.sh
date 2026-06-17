@@ -24,7 +24,7 @@ install_passwall2() {
     echo "[版本] $tag"
 
     local all_urls
-    all_urls=$(get_download_urls "$release_json")
+    all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
 
     local luci_url
     luci_url=$(echo "$all_urls" | grep "luci-app-passwall2" | grep "\.apk$" | head -1)
