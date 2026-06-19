@@ -26,17 +26,14 @@ install_taskplan() {
     app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
 
     if [ -z "$app_url" ]; then
-        echo "[重试] 当前版本无安装包，尝试获取上一版本..."
-        local api_url="https://api.github.com/repos/${owner}/${repo}/releases"
-        local releases_list
-        releases_list=$(_fetch_github_api "$api_url" "Releases list: $owner/$repo")
-        if [ -n "$releases_list" ]; then
-            all_urls=$(echo "$releases_list" | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p')
-            app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
-            if [ -n "$app_url" ]; then
-                tag=$(echo "$app_url" | sed 's|.*/releases/download/||' | sed 's|/.*||')
-                echo "[版本] 回退至 $tag"
-            fi
+        echo "[重试] 当前版本无 APK 包，尝试回退至旧版本..."
+        local fallback_result
+        fallback_result=$(find_asset_in_older_releases "$owner" "$repo" "$tag" "\\.apk$" "luci-app-taskplan-")
+        if [ -n "$fallback_result" ]; then
+            tag=$(echo "$fallback_result" | sed -n '1p')
+            all_urls=$(echo "$fallback_result" | sed -n '1!p')
+            app_url=$(echo "$all_urls" | grep "\.apk$" | head -1)
+            echo "[版本] 回退至 $tag"
         fi
     fi
 

@@ -215,3 +215,66 @@ filter_dependency_apks() {
 
     echo "$urls" | grep -iv '\.apk$' > /dev/null 2>&1 || echo "$urls"
 }
+
+# 通用版本回退：在旧版本中查找第一个包含指定资产匹配模式的版本
+# 输出：第一行 = tag，后续行 = 匹配资产的下载 URL（含多行）
+# 参数：
+#   $1 - owner
+#   $2 - repo
+#   $3 - 跳过版本 tag（当前最新版）
+#   $4 - URL 匹配模式（awk regex，如 "\\.apk$"）
+#   $5 - 名称额外匹配模式（可选，awk regex，如 "luci-app-taskplan-"）
+find_asset_in_older_releases() {
+    local owner="$1"
+    local repo="$2"
+    local skip_tag="$3"
+    local url_pattern="$4"
+    local name_pattern="$5"
+
+    [ -z "$owner" ] || [ -z "$repo" ] && return 1
+
+    local api_url="https://api.github.com/repos/${owner}/${repo}/releases?per_page=30"
+    local releases_list
+    releases_list=$(_fetch_github_api "$api_url" "Releases list: $owner/$repo")
+    [ -z "$releases_list" ] && return 1
+
+    # awk 解析 tag + browser_download_url，找到第一个匹配的版本
+    local result
+    result=$(echo "$releases_list" | awk -v skip="$skip_tag" -v upat="$url_pattern" -v npat="$name_pattern" '
+    BEGIN { tag = ""; found = 0; output = "" }
+    /"tag_name":/ {
+        if (found && tag != "" && tag != skip) {
+            print tag
+            print output
+            exit 0
+        }
+        gsub(/.*"tag_name": *"/, "");
+        gsub(/".*/, "");
+        tag = $0;
+        found = 0;
+        output = "";
+    }
+    /"browser_download_url":/ {
+        gsub(/.*"browser_download_url": *"/, "");
+        gsub(/".*/, "");
+        url = $0;
+        if (url ~ upat) {
+            if (npat == "" || url ~ npat) {
+                found = 1;
+                if (output != "") output = output "\n";
+                output = output url;
+            }
+        }
+    }
+    END {
+        if (found && tag != "" && tag != skip) {
+            print tag
+            print output
+        }
+    }
+    ')
+
+    [ -z "$result" ] && return 1
+    echo "$result"
+    return 0
+}
