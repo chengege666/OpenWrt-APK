@@ -38,16 +38,42 @@ install_advanced_uninstall() {
         return 1
     fi
 
-    echo "[安装] 正在安装..."
-    cd "${CACHE_DIR}/${plugin_name}" || return 1
-    chmod +x "${filename}"
+    local download_dir="${CACHE_DIR}/${plugin_name}"
+    local extracted_dir="${download_dir}/extracted"
+    rm -rf "$extracted_dir"
+    mkdir -p "$extracted_dir"
 
-    if sh "${filename}" 2>&1; then
+    echo "[解压] 正在解压安装包..."
+    chmod +x "${download_dir}/${filename}"
+
+    if ! sh "${download_dir}/${filename}" --target "$extracted_dir" --noexec 2>/dev/null; then
+        echo "[错误] 解压失败"
+        rm -rf "$download_dir"
+        return 1
+    fi
+
+    rm -f "${download_dir}/${filename}"
+
+    # 查找 ipk 安装文件
+    local ipk_files
+    ipk_files=$(find "$extracted_dir" -name "*.ipk" 2>/dev/null)
+
+    if [ -z "$ipk_files" ]; then
+        echo "[错误] 未找到安装包文件"
+        rm -rf "$download_dir"
+        return 1
+    fi
+
+    echo "[安装] 正在安装..."
+    if apk add --allow-untrusted --force-overwrite $ipk_files 2>/dev/null; then
         echo "[成功] 安装完成"
     else
         echo "[错误] 安装失败"
+        rm -rf "$download_dir"
         return 1
     fi
+
+    rm -rf "$download_dir"
 
     echo "[重启] 重启 LuCI..."
     restart_luci
