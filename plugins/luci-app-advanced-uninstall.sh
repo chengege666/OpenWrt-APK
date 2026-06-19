@@ -22,33 +22,32 @@ install_advanced_uninstall() {
     local all_urls
     all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
 
-    local apk_url
-    apk_url=$(echo "$all_urls" | grep "\.apk$" | head -1)
+    local run_url
+    run_url=$(echo "$all_urls" | grep "\.run$" | head -1)
 
-    if [ -z "$apk_url" ]; then
-        echo "[错误] 未找到 APK 文件"
+    if [ -z "$run_url" ]; then
+        echo "[错误] 未找到安装文件"
         return 1
     fi
 
     local filename
-    filename=$(basename "$apk_url")
+    filename=$(basename "$run_url")
 
-    if ! download_file "$apk_url" "${CACHE_DIR}/${plugin_name}/${filename}"; then
+    if ! download_file "$run_url" "${CACHE_DIR}/${plugin_name}/${filename}"; then
         echo "[错误] 下载失败"
         return 1
     fi
 
     echo "[安装] 正在安装..."
     cd "${CACHE_DIR}/${plugin_name}" || return 1
-    if apk add --allow-untrusted --force-overwrite *.apk; then
-        echo "[成功] APK 安装完成"
+    chmod +x "${filename}"
+
+    if sh "${filename}" 2>&1; then
+        echo "[成功] 安装完成"
     else
-        echo "[错误] APK 安装失败"
+        echo "[错误] 安装失败"
         return 1
     fi
-
-    echo "[清理] 清除 LuCI 缓存..."
-    rm -rf /tmp/luci-* 2>/dev/null
 
     echo "[重启] 重启 LuCI..."
     restart_luci
