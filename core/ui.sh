@@ -28,7 +28,7 @@ show_install_plugin_menu() {
     echo -e "  5.  Lucky (端口转发)           10. Daed (科学上网)"
     echo -e "  11. iStore (软件商店)          12. DiskMan (磁盘管理)"
     echo -e "  13. WeChatPush (消息推送)      14. PassWall (科学上网)"
-    echo -e "  15. Nikki (科学上网)            16. 高级卸载 (包管理)"
+    echo -e "  15. Nikki (科学上网)           16. 高级卸载 (包管理)"
     echo -e "  0.  返回上级"
     echo ""
 }
