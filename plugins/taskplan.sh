@@ -8,6 +8,22 @@ install_taskplan() {
     echo "================================"
     echo ""
 
+    local arch
+    arch=$(detect_arch) || return 1
+    echo "[架构] $arch"
+
+    local openwrt_ver
+    local ver_prefix="openwrt-24.10"
+    if [ -f /etc/openwrt_release ]; then
+        . /etc/openwrt_release 2>/dev/null
+        case "$DISTRIB_RELEASE" in
+            25*|snapshot*)
+                ver_prefix="SNAPSHOT"
+                ;;
+        esac
+    fi
+    echo "[系统] OpenWrt $ver_prefix"
+
     local owner="sirpdboy"
     local repo="luci-app-taskplan"
     local plugin_name="taskplan"
@@ -22,69 +38,98 @@ install_taskplan() {
     local all_urls
     all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
 
-    local app_url
-    app_url=$(echo "$all_urls" | grep "luci-app-taskplan-" | grep "\.apk$" | head -1)
+    local tarball_url
+    tarball_url=$(echo "$all_urls" | grep "${ver_prefix}-${arch}\.tar\.gz$" | head -1)
 
-    if [ -z "$app_url" ]; then
-        echo "[重试] 当前版本无 APK 包，尝试回退至旧版本..."
+    if [ -z "$tarball_url" ]; then
+        echo "[重试] 未找到 ${arch} 匹配包，尝试模糊匹配..."
+        tarball_url=$(echo "$all_urls" | grep "${ver_prefix}-" | grep -i "$(uname -m)" | grep "\.tar\.gz$" | head -1)
+    fi
+
+    if [ -z "$tarball_url" ]; then
+        tarball_url=$(echo "$all_urls" | grep "\.tar\.gz$" | grep -i "${arch}" | head -1)
+    fi
+
+    if [ -z "$tarball_url" ]; then
+        echo "[重试] 当前版本无 ${arch} 匹配包，尝试回退至旧版本..."
         local fallback_result
-        fallback_result=$(find_asset_in_older_releases "$owner" "$repo" "$tag" "\\.apk$" "luci-app-taskplan-")
+        fallback_result=$(find_asset_in_older_releases "$owner" "$repo" "$tag" "\.tar\.gz$" "${ver_prefix}-${arch}")
         if [ -n "$fallback_result" ]; then
             tag=$(echo "$fallback_result" | sed -n '1p')
             all_urls=$(echo "$fallback_result" | sed -n '1!p')
-            app_url=$(echo "$all_urls" | grep "\.apk$" | head -1)
+            tarball_url=$(echo "$all_urls" | grep "\.tar\.gz$" | grep -i "${arch}" | head -1)
             echo "[版本] 回退至 $tag"
         fi
     fi
 
-    if [ -z "$app_url" ]; then
-        echo "[错误] 未找到 luci-app-taskplan 安装包"
+    if [ -z "$tarball_url" ]; then
+        echo "[错误] 未找到匹配架构 ${arch} 的下载包"
         return 1
     fi
 
-    local i18n_url
-    i18n_url=$(echo "$all_urls" | grep "luci-i18n-taskplan-zh-cn-" | grep "\.apk$" | head -1)
+    local tarball_name
+    tarball_name=$(basename "$tarball_url")
 
-    local apk_files=""
-
-    if [ -n "$app_url" ]; then
-        local app_name
-        app_name=$(basename "$app_url")
-        if ! download_file "$app_url" "${CACHE_DIR}/${plugin_name}/${app_name}"; then
-            echo "[错误] 下载失败: $app_name"
-            return 1
-        fi
-        apk_files="$apk_files ${CACHE_DIR}/${plugin_name}/${app_name}"
+    if ! download_file "$tarball_url" "${CACHE_DIR}/${plugin_name}/${tarball_name}"; then
+        echo "[错误] 下载失败"
+        return 1
     fi
 
-    if [ -n "$i18n_url" ]; then
-        local i18n_name
-        i18n_name=$(basename "$i18n_url")
-        if ! download_file "$i18n_url" "${CACHE_DIR}/${plugin_name}/${i18n_name}"; then
-            echo "[警告] 中文包下载失败，仅安装主程序"
-        else
-            apk_files="$apk_files ${CACHE_DIR}/${plugin_name}/${i18n_name}"
-        fi
+    echo "[解压] 正在解压..."
+    if ! tar xzf "${CACHE_DIR}/${plugin_name}/${tarball_name}" -C "${CACHE_DIR}/${plugin_name}" 2>/dev/null; then
+        echo "[错误] 解压失败"
+        rm -f "${CACHE_DIR}/${plugin_name}/${tarball_name}"
+        return 1
     fi
 
-    if [ -z "$apk_files" ]; then
+    rm -f "${CACHE_DIR}/${plugin_name}/${tarball_name}"
+
+    local pkg_files
+    pkg_files=$(find "${CACHE_DIR}/${plugin_name}" -name "*.apk" -o -name "*.ipk" 2>/dev/null)
+
+    if [ -z "$pkg_files" ]; then
         echo "[错误] 未找到安装包文件"
         return 1
     fi
 
     local pkg_count
-    pkg_count=$(echo "$apk_files" | wc -w)
+    pkg_count=$(echo "$pkg_files" | wc -l)
     echo "[安装] 正在安装 $pkg_count 个包..."
 
-    if apk add --allow-untrusted --force-overwrite $apk_files 2>/dev/null; then
-        echo "[成功] 安装完成"
-    else
+    local apk_list=""
+    local ipk_list=""
+    for f in $pkg_files; do
+        case "$f" in
+            *.apk)
+                apk_list="$apk_list $f"
+                ;;
+            *.ipk)
+                ipk_list="$ipk_list $f"
+                ;;
+        esac
+    done
+
+    local install_ok=0
+    if [ -n "$apk_list" ]; then
+        echo "[安装] 安装 APK 包..."
+        if apk add --allow-untrusted --force-overwrite $apk_list 2>/dev/null; then
+            install_ok=1
+        fi
+    fi
+
+    if [ -n "$ipk_list" ]; then
+        echo "[安装] 安装 IPK 包..."
+        if opkg install --force-overwrite $ipk_list 2>/dev/null; then
+            install_ok=1
+        fi
+    fi
+
+    if [ "$install_ok" -eq 0 ]; then
         echo "[错误] 安装失败"
         return 1
     fi
 
-    echo "[修复] 修复依赖..."
-    fix_dependencies
+    echo "[成功] 安装完成"
 
     echo "[重启] 重启 LuCI..."
     restart_luci
