@@ -7,6 +7,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/core/github.sh"
 . "${SCRIPT_DIR}/core/install.sh"
 . "${SCRIPT_DIR}/core/ui.sh"
+. "${SCRIPT_DIR}/core/system-init.sh"
+. "${SCRIPT_DIR}/core/expand-overlay.sh"
+. "${SCRIPT_DIR}/core/doctor.sh"
 
 . "${SCRIPT_DIR}/plugins/openclash.sh"
 . "${SCRIPT_DIR}/plugins/mosdns.sh"
@@ -50,6 +53,18 @@ main_menu() {
                 ;;
             4)
                 shortcut_config
+                ;;
+            5)
+                system_init
+                wait_for_enter
+                ;;
+            6)
+                expand_overlay
+                wait_for_enter
+                ;;
+            7)
+                show_system_info
+                wait_for_enter
                 ;;
             00)
                 uninstall_store
