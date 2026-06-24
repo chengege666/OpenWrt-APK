@@ -1,9 +1,37 @@
 #!/bin/sh
-# core/expand-overlay.sh - 自定义 overlay 扩容
+# core/expand-overlay.sh - overlay 管理（扩容 / 还原）
 # 调用方式: expand_overlay
-# 支持大小: 2G / 4G / 8G / 4096M / all
+# 子菜单:
+#   1. 扩容 overlay
+#   2. 还原 overlay（恢复到内部存储）
 
 expand_overlay() {
+    while true; do
+        echo ""
+        echo "================================"
+        echo " Overlay 管理"
+        echo "================================"
+        echo ""
+        echo "  1. 扩容 overlay"
+        echo "  2. 还原 overlay（恢复到内部存储）"
+        echo "  0. 返回"
+        echo ""
+        printf "请选择: "; read -r sel < /dev/tty 2>/dev/null || read -r sel
+        sel=$(echo "$sel" | tr -d '\r\n ')
+
+        case "$sel" in
+            1) _do_expand_overlay; wait_for_enter ;;
+            2) _revert_overlay; wait_for_enter ;;
+            0) return ;;
+            *) echo "[错误] 无效选择"; sleep 1 ;;
+        esac
+    done
+}
+
+# ============================================================
+# 扩容 overlay
+# ============================================================
+_do_expand_overlay() {
     echo ""
     echo "============================================"
     echo " OpenWrt overlay 自定义扩容"
@@ -192,6 +220,83 @@ expand_overlay() {
     echo "  UUID: $uuid"
     echo "  大小: ${size_mb}MiB"
     echo "================================"
+    printf "立即重启？(y/N): "; read -r rb < /dev/tty 2>/dev/null || read -r rb
+    [ "$(echo "$rb" | tr 'a-z' 'A-Z')" = "Y" ] && reboot || echo "稍后手动: reboot"
+}
+
+# ============================================================
+# 还原 overlay 扩容（恢复到内部 loop0）
+# ============================================================
+_revert_overlay() {
+    echo ""
+    echo "============================================"
+    echo " 还原 overlay 扩容"
+    echo "============================================"
+    echo ""
+
+    [ "$(id -u)" = "0" ] || { echo "[错误] 请使用 root 用户执行"; return 1; }
+
+    # 检测当前是否在使用外部分区
+    local overlay_src
+    overlay_src=$(df /overlay 2>/dev/null | awk 'NR==2{print $1}')
+    echo "当前 overlay 来源: $overlay_src"
+
+    case "$overlay_src" in
+        /dev/loop0|/dev/loop1)
+            echo "当前已是内部 loop 设备，无需还原"
+            return 0
+            ;;
+        /dev/mmcblk*|/dev/sd*|/dev/nvme*|/dev/vd*|/dev/xvd*)
+            echo "检测到外部分区: $overlay_src"
+            ;;
+        *)
+            echo "[警告] 无法确认 overlay 来源: $overlay_src"
+            ;;
+    esac
+
+    # 检查是否有 fstab 条目
+    local has_fstab=0
+    if uci -q get fstab.universal_overlay >/dev/null 2>&1; then
+        has_fstab=1
+        echo "  [发现] fstab 配置"
+    fi
+
+    local has_rc=0
+    if grep -q "EXPAND_OVERLAY_FALLBACK" /etc/rc.local 2>/dev/null; then
+        has_rc=1
+        echo "  [发现] rc.local fallback"
+    fi
+
+    if [ "$has_fstab" -eq 0 ] && [ "$has_rc" -eq 0 ]; then
+        echo "[提示] 未发现扩容配置，无需还原"
+        return 0
+    fi
+
+    echo ""
+    echo "[警告] 还原后将恢复到内部存储空间"
+    echo "  外部分区上的数据不会删除，但不再自动挂载"
+    printf "确认还原？(y/N): "; read -r confirm < /dev/tty 2>/dev/null || read -r confirm
+    [ "$(echo "$confirm" | tr 'a-z' 'A-Z')" = "Y" ] || { echo "[取消]"; return 0; }
+    echo ""
+
+    # 删除 fstab 条目
+    if [ "$has_fstab" -eq 1 ]; then
+        echo "[删除] fstab 配置"
+        uci -q delete fstab.universal_overlay || true
+        uci commit fstab
+    fi
+
+    # 删除 rc.local fallback
+    if [ "$has_rc" -eq 1 ]; then
+        echo "[删除] rc.local fallback"
+        sed -i '/EXPAND_OVERLAY_FALLBACK/,/^fi/d' /etc/rc.local
+    fi
+
+    echo ""
+    echo "================================"
+    echo " 还原完成"
+    echo "================================"
+    echo "重启后将恢复到内部存储空间"
     printf "立即重启？(y/N): "; read -r rb < /dev/tty 2>/dev/null || read -r rb
     [ "$(echo "$rb" | tr 'a-z' 'A-Z')" = "Y" ] && reboot || echo "稍后手动: reboot"
 }
