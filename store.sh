@@ -678,14 +678,16 @@ repo_test_url() {
     local rc=$?
 
     if [ $rc -eq 0 ] && [ -n "$result" ]; then
-        local ms
-        ms=$(echo "$result * 1000" | awk '{printf "%.0f", $1}')
-        if [ "$ms" -lt 1000 ]; then
-            echo "  ${name}: ${ms} ms"
-        else
+        local int_ms
+        int_ms=$(echo "$result * 1000" | awk '{print int($1)}')
+        if [ "$int_ms" -eq 0 ] 2>/dev/null; then
+            echo "  ${name}: < 1 ms"
+        elif [ "$int_ms" -ge 1000 ] 2>/dev/null; then
             local sec
             sec=$(echo "$result" | awk '{printf "%.2f", $1}')
             echo "  ${name}: ${sec} s"
+        else
+            echo "  ${name}: ${int_ms} ms"
         fi
     else
         echo "  ${name}: 超时 / 不可达"
@@ -700,7 +702,7 @@ repo_test_latency() {
     echo ""
 
     local base_url
-    base_url=$(head -1 "$REPO_DISTFEEDS" 2>/dev/null | grep -oP 'https?://[^/]+' | head -1)
+    base_url=$(head -1 "$REPO_DISTFEEDS" 2>/dev/null | grep -oE 'https?://[^/]+' | head -1)
 
     echo "测试目标: ${base_url:-$(head -1 "$REPO_DISTFEEDS" 2>/dev/null)}"
     echo ""
