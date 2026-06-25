@@ -101,6 +101,7 @@ show_repo_menu() {
     echo -e "  2.  清华源 (Tsinghua)"
     echo -e "  3.  官方源 (Official)"
     echo -e "  4.  恢复默认源"
+    echo -e "  5.  查看当前源"
     echo -e "  0.  返回上级"
     echo ""
 }

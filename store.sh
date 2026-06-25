@@ -635,6 +635,19 @@ repo_restore() {
     echo ""
 }
 
+repo_show_current() {
+    echo ""
+    echo "================================"
+    echo " 当前软件源"
+    echo "================================"
+    if [ -f "$REPO_DISTFEEDS" ]; then
+        cat "$REPO_DISTFEEDS"
+    else
+        echo "[提示] 未找到源文件: ${REPO_DISTFEEDS}"
+    fi
+    echo ""
+}
+
 run_custom_shortcut() {
     local key="$1"
     local target="/usr/bin/${key}"
