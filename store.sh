@@ -701,10 +701,7 @@ repo_test_latency() {
     echo "================================"
     echo ""
 
-    local base_url
-    base_url=$(head -1 "$REPO_DISTFEEDS" 2>/dev/null | grep -oE 'https?://[^/]+' | head -1)
-
-    echo "测试目标: ${base_url:-$(head -1 "$REPO_DISTFEEDS" 2>/dev/null)}"
+    echo "正在测试以下源延迟:"
     echo ""
 
     repo_test_url "https://mirrors.ustc.edu.cn" "中科大源 (USTC)"
