@@ -554,6 +554,10 @@ modify_repo() {
                 repo_test_latency
                 wait_for_enter
                 ;;
+            7)
+                repo_update
+                wait_for_enter
+                ;;
             0)
                 return
                 ;;
