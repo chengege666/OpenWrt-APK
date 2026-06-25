@@ -671,23 +671,31 @@ repo_show_current() {
 repo_test_url() {
     local url="$1"
     local name="$2"
-    local timeout=5
+    local timeout=4
 
+    # 从 URL 提取域名
+    local domain
+    domain=$(echo "$url" | sed 's|https\?://||;s|/.*$||')
+
+    # 用 ping 测 ICMP 延迟，可绕过大部分透明代理
     local result
-    result=$(curl -o /dev/null -s -w '%{time_total}' --connect-timeout "$timeout" --max-time "$timeout" "$url" 2>/dev/null)
+    result=$(ping -c 1 -W "$timeout" "$domain" 2>/dev/null)
     local rc=$?
 
     if [ $rc -eq 0 ] && [ -n "$result" ]; then
-        local int_ms
-        int_ms=$(echo "$result * 1000" | awk '{print int($1)}')
-        if [ "$int_ms" -eq 0 ] 2>/dev/null; then
-            echo "  ${name}: < 1 ms"
-        elif [ "$int_ms" -ge 1000 ] 2>/dev/null; then
-            local sec
-            sec=$(echo "$result" | awk '{printf "%.2f", $1}')
-            echo "  ${name}: ${sec} s"
+        # BusyBox ping 输出: 64 bytes from 1.2.3.4: seq=0 ttl=52 time=12.345 ms
+        local time_val
+        time_val=$(echo "$result" | sed -n 's/.*time=\([0-9.]*\).*/\1/p' | head -1)
+        if [ -n "$time_val" ]; then
+            local int_ms
+            int_ms=$(echo "$time_val" | awk '{print int($1)}')
+            if [ "$int_ms" -ge 1000 ] 2>/dev/null; then
+                echo "  ${name}: ${time_val} ms"
+            else
+                echo "  ${name}: ${int_ms} ms"
+            fi
         else
-            echo "  ${name}: ${int_ms} ms"
+            echo "  ${name}: 延迟获取失败"
         fi
     else
         echo "  ${name}: 超时 / 不可达"
