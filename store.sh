@@ -738,6 +738,13 @@ repo_test_latency() {
     echo ""
 }
 
+repo_update() {
+    echo ""
+    echo "[更新] 正在刷新软件列表..."
+    apk update
+    echo ""
+}
+
 run_custom_shortcut() {
     local key="$1"
     local target="/usr/bin/${key}"
