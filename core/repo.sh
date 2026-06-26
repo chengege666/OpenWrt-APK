@@ -234,18 +234,19 @@ repo_test_and_apply() {
     _repo_test_one "tsinghua" "清华源 (Tsinghua)" "https://mirrors.tuna.tsinghua.edu.cn/openwrt/" "$result_file"
     _repo_test_one "official" "官方源 (Official)" "https://downloads.openwrt.org/" "$result_file"
 
-    # 找出最快源（按第 4 列数值升序）
+    # 找出最快源（逐行比较，避免 sort 兼容性问题）
     if [ -f "$result_file" ]; then
-        local best_line
-        best_line=$(sort -t'|' -k4n "$result_file" | head -1)
+        local best_key="" best_name="" best_url="" best_ms=99999
+
+        while IFS='|' read -r k n u m; do
+            [ -z "$k" ] && continue
+            if [ "$m" -lt "$best_ms" ] 2>/dev/null; then
+                best_key="$k"; best_name="$n"; best_url="$u"; best_ms="$m"
+            fi
+        done < "$result_file"
         rm -f "$result_file"
 
-        if [ -n "$best_line" ]; then
-            local best_key best_name best_url best_ms
-            best_key=$(echo "$best_line" | cut -d'|' -f1)
-            best_name=$(echo "$best_line" | cut -d'|' -f2)
-            best_url=$(echo "$best_line" | cut -d'|' -f3)
-            best_ms=$(echo "$best_line" | cut -d'|' -f4)
+        if [ -n "$best_key" ]; then
 
             echo ""
             echo "========================================"
