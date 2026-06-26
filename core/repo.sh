@@ -47,6 +47,96 @@ repo_tsinghua() {
     echo ""
 }
 
+repo_aliyun() {
+    repo_check_file || return
+    repo_backup_first
+
+    echo ""
+    echo "[修改] 正在切换至阿里云源..."
+    sed -i 's|downloads.openwrt.org|mirrors.aliyun.com/openwrt|g' "$REPO_DISTFEEDS"
+    echo "[完成] 已切换至阿里云源"
+    echo "[更新] 正在刷新软件列表..."
+    apk update
+    echo ""
+}
+
+repo_tencent() {
+    repo_check_file || return
+    repo_backup_first
+
+    echo ""
+    echo "[修改] 正在切换至腾讯云源..."
+    sed -i 's|downloads.openwrt.org|mirrors.tencent.com/openwrt|g' "$REPO_DISTFEEDS"
+    echo "[完成] 已切换至腾讯云源"
+    echo "[更新] 正在刷新软件列表..."
+    apk update
+    echo ""
+}
+
+repo_huawei() {
+    repo_check_file || return
+    repo_backup_first
+
+    echo ""
+    echo "[修改] 正在切换至华为云源..."
+    sed -i 's|downloads.openwrt.org|mirrors.huaweicloud.com/openwrt|g' "$REPO_DISTFEEDS"
+    echo "[完成] 已切换至华为云源"
+    echo "[更新] 正在刷新软件列表..."
+    apk update
+    echo ""
+}
+
+repo_163() {
+    repo_check_file || return
+    repo_backup_first
+
+    echo ""
+    echo "[修改] 正在切换至网易源..."
+    sed -i 's|downloads.openwrt.org|mirrors.163.com/openwrt|g' "$REPO_DISTFEEDS"
+    echo "[完成] 已切换至网易源"
+    echo "[更新] 正在刷新软件列表..."
+    apk update
+    echo ""
+}
+
+repo_sjtug() {
+    repo_check_file || return
+    repo_backup_first
+
+    echo ""
+    echo "[修改] 正在切换至上海交大源..."
+    sed -i 's|downloads.openwrt.org|mirrors.sjtug.sjtu.edu.cn/openwrt|g' "$REPO_DISTFEEDS"
+    echo "[完成] 已切换至上海交大源"
+    echo "[更新] 正在刷新软件列表..."
+    apk update
+    echo ""
+}
+
+repo_openwrt_ai() {
+    repo_check_file || return
+
+    . /etc/openwrt_release 2>/dev/null
+    local ver
+    ver=$(echo "$DISTRIB_RELEASE" | cut -d'.' -f1,2)
+    [ -z "$ver" ] && ver="25.12"
+
+    local arch
+    arch=$(apk --print-arch 2>/dev/null || uname -m)
+    [ -z "$arch" ] && { echo "[错误] 无法检测架构"; return 1; }
+
+    local repo_line="src/gz openwrt_kiddin9 https://dl.openwrt.ai/packages-${ver}/${arch}"
+
+    echo ""
+    echo "[修改] 正在添加 openwrt.ai 附加源..."
+    # 先移除旧行（如有），再追加
+    sed -i '/dl\.openwrt\.ai/d' "$REPO_DISTFEEDS"
+    echo "$repo_line" >> "$REPO_DISTFEEDS"
+    echo "[完成] 已添加 openwrt.ai 附加源 (${ver}/${arch})"
+    echo "[更新] 正在刷新软件列表..."
+    apk update
+    echo ""
+}
+
 repo_official() {
     repo_check_file || return
     repo_backup_first
@@ -55,6 +145,13 @@ repo_official() {
     echo "[修改] 正在切换至官方源..."
     sed -i 's|mirrors.ustc.edu.cn/openwrt|downloads.openwrt.org|g' "$REPO_DISTFEEDS"
     sed -i 's|mirrors.tuna.tsinghua.edu.cn/openwrt|downloads.openwrt.org|g' "$REPO_DISTFEEDS"
+    sed -i 's|mirrors.aliyun.com/openwrt|downloads.openwrt.org|g' "$REPO_DISTFEEDS"
+    sed -i 's|mirrors.tencent.com/openwrt|downloads.openwrt.org|g' "$REPO_DISTFEEDS"
+    sed -i 's|mirrors.huaweicloud.com/openwrt|downloads.openwrt.org|g' "$REPO_DISTFEEDS"
+    sed -i 's|mirrors.163.com/openwrt|downloads.openwrt.org|g' "$REPO_DISTFEEDS"
+    sed -i 's|mirrors.sjtug.sjtu.edu.cn/openwrt|downloads.openwrt.org|g' "$REPO_DISTFEEDS"
+    # 移除 openwrt.ai 附加源
+    sed -i '/dl\.openwrt\.ai/d' "$REPO_DISTFEEDS"
     echo "[完成] 已切换至官方源"
     echo "[更新] 正在刷新软件列表..."
     apk update
@@ -94,6 +191,18 @@ repo_show_current() {
         name="中科大源 (USTC)"
     elif grep -q "mirrors.tuna.tsinghua.edu.cn" "$REPO_DISTFEEDS" 2>/dev/null; then
         name="清华源 (Tsinghua)"
+    elif grep -q "mirrors.aliyun.com" "$REPO_DISTFEEDS" 2>/dev/null; then
+        name="阿里云源 (Aliyun)"
+    elif grep -q "mirrors.tencent.com" "$REPO_DISTFEEDS" 2>/dev/null; then
+        name="腾讯云源 (Tencent)"
+    elif grep -q "mirrors.huaweicloud.com" "$REPO_DISTFEEDS" 2>/dev/null; then
+        name="华为云源 (Huawei)"
+    elif grep -q "mirrors.163.com" "$REPO_DISTFEEDS" 2>/dev/null; then
+        name="网易源 (163)"
+    elif grep -q "mirrors.sjtug.sjtu.edu.cn" "$REPO_DISTFEEDS" 2>/dev/null; then
+        name="上海交大源 (SJTUG)"
+    elif grep -q "dl.openwrt.ai" "$REPO_DISTFEEDS" 2>/dev/null; then
+        name="官方源 + openwrt.ai 附加源"
     elif grep -q "downloads.openwrt.org" "$REPO_DISTFEEDS" 2>/dev/null; then
         name="官方源 (Official)"
     fi
@@ -169,6 +278,12 @@ repo_test_latency() {
 
     repo_test_url "https://mirrors.ustc.edu.cn/openwrt/" "中科大源 (USTC)"
     repo_test_url "https://mirrors.tuna.tsinghua.edu.cn/openwrt/" "清华源 (Tsinghua)"
+    repo_test_url "https://mirrors.aliyun.com/openwrt/" "阿里云源 (Aliyun)"
+    repo_test_url "https://mirrors.tencent.com/openwrt/" "腾讯云源 (Tencent)"
+    repo_test_url "https://mirrors.huaweicloud.com/openwrt/" "华为云源 (Huawei)"
+    repo_test_url "https://mirrors.163.com/openwrt/" "网易源 (163)"
+    repo_test_url "https://mirrors.sjtug.sjtu.edu.cn/openwrt/" "上海交大源 (SJTUG)"
+    repo_test_url "https://dl.openwrt.ai/" "openwrt.ai (Kiddin9)"
     repo_test_url "https://downloads.openwrt.org/" "官方源 (Official)"
 
     echo ""
@@ -198,23 +313,47 @@ modify_repo() {
                 wait_for_enter
                 ;;
             3)
-                repo_official
+                repo_aliyun
                 wait_for_enter
                 ;;
             4)
-                repo_restore
+                repo_tencent
                 wait_for_enter
                 ;;
             5)
-                repo_show_current
+                repo_huawei
                 wait_for_enter
                 ;;
             6)
-                repo_test_latency
+                repo_163
                 wait_for_enter
                 ;;
             7)
+                repo_sjtug
+                wait_for_enter
+                ;;
+            8)
+                repo_official
+                wait_for_enter
+                ;;
+            9)
+                repo_restore
+                wait_for_enter
+                ;;
+            10)
+                repo_show_current
+                wait_for_enter
+                ;;
+            11)
+                repo_test_latency
+                wait_for_enter
+                ;;
+            12)
                 repo_update
+                wait_for_enter
+                ;;
+            13)
+                repo_openwrt_ai
                 wait_for_enter
                 ;;
             0)
