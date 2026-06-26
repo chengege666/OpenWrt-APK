@@ -226,36 +226,20 @@ repo_test_and_apply() {
     echo "========================================"
     echo ""
 
-    local sources="
-ustc|中科大源 (USTC)|https://mirrors.ustc.edu.cn/openwrt/
-tsinghua|清华源 (Tsinghua)|https://mirrors.tuna.tsinghua.edu.cn/openwrt/
-official|官方源 (Official)|https://downloads.openwrt.org/
-"
+    local result_file="/tmp/repo_speed_result.$$"
+    rm -f "$result_file"
 
-    local fastest_name=""
-    local fastest_url=""
-    local fastest_ms=99999
-    local results=""
+    # 逐行测速，避免管道子 shell 导致变量作用域问题
+    _repo_test_one "ustc" "中科大源 (USTC)" "https://mirrors.ustc.edu.cn/openwrt/" "$result_file"
+    _repo_test_one "tsinghua" "清华源 (Tsinghua)" "https://mirrors.tuna.tsinghua.edu.cn/openwrt/" "$result_file"
+    _repo_test_one "official" "官方源 (Official)" "https://downloads.openwrt.org/" "$result_file"
 
-    echo "$sources" | while IFS="|" read -r key name url; do
-        [ -z "$key" ] && continue
-        printf "  测速 %s ... " "$name"
-        local ms
-        ms=$(_repo_get_latency_ms "$url")
-        if [ -n "$ms" ]; then
-            echo "${ms} ms"
-            # 用临时文件保存最快结果
-            echo "${key}|${name}|${url}|${ms}" >> /tmp/repo_speed_result.$$
-        else
-            echo "超时 / 不可达"
-        fi
-    done
-
-    # 从临时文件找出最快源
-    if [ -f /tmp/repo_speed_result.$$ ]; then
+    # 找出最快源（按第 4 列数值升序）
+    if [ -f "$result_file" ]; then
         local best_line
-        best_line=$(sort -t'|' -k4 -n /tmp/repo_speed_result.$$ | head -1)
-        rm -f /tmp/repo_speed_result.$$
+        best_line=$(sort -t'|' -k4n "$result_file" | head -1)
+        rm -f "$result_file"
+
         if [ -n "$best_line" ]; then
             local best_key best_name best_url best_ms
             best_key=$(echo "$best_line" | cut -d'|' -f1)
@@ -292,6 +276,24 @@ official|官方源 (Official)|https://downloads.openwrt.org/
     fi
 
     wait_for_enter
+}
+
+# 内部：测速单个源并记录结果到文件
+_repo_test_one() {
+    local key="$1"
+    local name="$2"
+    local url="$3"
+    local outfile="$4"
+
+    printf "  测速 %s ... " "$name"
+    local ms
+    ms=$(_repo_get_latency_ms "$url")
+    if [ -n "$ms" ]; then
+        echo "${ms} ms"
+        echo "${key}|${name}|${url}|${ms}" >> "$outfile"
+    else
+        echo "超时 / 不可达"
+    fi
 }
 
 # 软件源修改菜单（由 store.sh 回调）
