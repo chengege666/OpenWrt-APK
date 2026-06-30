@@ -19,7 +19,7 @@
 #
 # 使用方式: wget -O- https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/install.sh | sh
 
-REPO_URL="https://github.com/chengege666/OpenWrt-APK"
+REPO_BASE=""
 INSTALL_DIR="/root/apk-store"
 
 echo "================================"
@@ -27,8 +27,16 @@ echo " OpenWrt APK安装脚本 （CGG） 安装器"
 echo "================================"
 echo ""
 
-if ! wget -q --spider --timeout=5 https://github.com 2>/dev/null; then
-    echo "[错误] 网络连接失败"
+# 自动检测可用仓库源
+REPO_BASE=""
+if wget -q --spider --timeout=5 https://gitee.com 2>/dev/null; then
+    REPO_BASE="https://gitee.com/chengege666/OpenWrt-APK"
+    echo "[源] 使用 Gitee 仓库"
+elif wget -q --spider --timeout=5 https://github.com 2>/dev/null; then
+    REPO_BASE="https://github.com/chengege666/OpenWrt-APK"
+    echo "[源] 使用 GitHub 仓库"
+else
+    echo "[错误] 网络连接失败 (无法访问 Gitee 和 GitHub)"
     exit 1
 fi
 
@@ -44,7 +52,7 @@ rm -rf "$TMP_DIR"
 mkdir -p "$TMP_DIR"
 
 echo "[下载] 正在下载仓库压缩包..."
-if ! wget -q --timeout=60 -O "${TMP_DIR}/repo.zip" "${REPO_URL}/archive/main.zip" 2>/dev/null; then
+if ! wget -q --timeout=60 -O "${TMP_DIR}/repo.zip" "${REPO_BASE}/archive/main.zip" 2>/dev/null; then
     echo "[错误] 仓库下载失败"
     exit 1
 fi
@@ -60,6 +68,9 @@ SRC_DIR="${TMP_DIR}/OpenWrt-APK-main"
 cp -f "${SRC_DIR}/store.sh" "${INSTALL_DIR}/store.sh"
 cp -rf "${SRC_DIR}/core/"* "${INSTALL_DIR}/core/"
 cp -rf "${SRC_DIR}/plugins/"* "${INSTALL_DIR}/plugins/"
+
+# 保存仓库地址供后续更新使用
+echo "$REPO_BASE" > "${INSTALL_DIR}/.repo_url"
 
 rm -rf "$TMP_DIR"
 

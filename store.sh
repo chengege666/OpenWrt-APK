@@ -423,7 +423,23 @@ update_store() {
 
     echo "[下载] 正在获取最新版本..."
 
-    local zip_url="https://github.com/chengege666/OpenWrt-APK/archive/main.zip"
+    # 读取已保存的仓库地址，未保存则自动检测
+    local repo_base=""
+    if [ -f "${SCRIPT_DIR}/.repo_url" ]; then
+        repo_base=$(cat "${SCRIPT_DIR}/.repo_url")
+    else
+        if wget -q --spider --timeout=5 https://gitee.com 2>/dev/null; then
+            repo_base="https://gitee.com/chengege666/OpenWrt-APK"
+        elif wget -q --spider --timeout=5 https://github.com 2>/dev/null; then
+            repo_base="https://github.com/chengege666/OpenWrt-APK"
+        else
+            echo "[错误] 网络连接失败"
+            sleep 2
+            return
+        fi
+    fi
+
+    local zip_url="${repo_base}/archive/main.zip"
 
     if ! wget -q --timeout=60 -O "${tmp_dir}/repo.zip" "$zip_url" 2>/dev/null; then
         echo "[错误] 仓库下载失败"
