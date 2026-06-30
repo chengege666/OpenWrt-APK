@@ -5,10 +5,6 @@ CACHE_DIR="/root/apk-store/cache"
 MAX_RETRIES=3
 RETRY_DELAY=5
 
-# GitHub 加速镜像（留空则直连）
-# 格式如: "https://cgjs.1231818.xyz"
-GITHUB_MIRROR="https://gh.1231818.xyz"
-
 check_internet() {
     wget -q --spider --timeout=5 https://github.com 2>/dev/null
     return $?

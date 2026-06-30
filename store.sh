@@ -425,7 +425,7 @@ update_store() {
 
     local zip_url="https://github.com/chengege666/OpenWrt-APK/archive/main.zip"
 
-    if ! download_file "$zip_url" "${tmp_dir}/repo.zip"; then
+    if ! wget -q --timeout=60 -O "${tmp_dir}/repo.zip" "$zip_url" 2>/dev/null; then
         echo "[错误] 仓库下载失败"
         rm -rf "$tmp_dir"
         sleep 2
