@@ -423,23 +423,7 @@ update_store() {
 
     echo "[下载] 正在获取最新版本..."
 
-    # 读取已保存的仓库地址，未保存则自动检测
-    local repo_base=""
-    if [ -f "${SCRIPT_DIR}/.repo_url" ]; then
-        repo_base=$(cat "${SCRIPT_DIR}/.repo_url")
-    else
-        if wget -q --spider --timeout=5 https://gitee.com 2>/dev/null; then
-            repo_base="https://gitee.com/chengege666/OpenWrt-APK"
-        elif wget -q --spider --timeout=5 https://github.com 2>/dev/null; then
-            repo_base="https://github.com/chengege666/OpenWrt-APK"
-        else
-            echo "[错误] 网络连接失败"
-            sleep 2
-            return
-        fi
-    fi
-
-    local zip_url="${repo_base}/archive/main.zip"
+    local zip_url="https://github.com/chengege666/OpenWrt-APK/archive/main.zip"
 
     if ! wget -q --timeout=60 -O "${tmp_dir}/repo.zip" "$zip_url" 2>/dev/null; then
         echo "[错误] 仓库下载失败"
@@ -456,10 +440,7 @@ update_store() {
         return
     fi
 
-    local src_dir=""
-    for _d in "${tmp_dir}"/*/; do
-        [ -d "$_d" ] && src_dir="$_d" && break
-    done
+    local src_dir="${tmp_dir}/OpenWrt-APK-main"
 
     if [ ! -f "${src_dir}/store.sh" ]; then
         echo "[错误] 核心文件缺失，更新失败"

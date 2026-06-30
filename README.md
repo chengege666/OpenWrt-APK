@@ -180,11 +180,13 @@ OpenWrt-APK/
 ```sh
 # 短链接
 bash <(curl -sL https://lj.1231818.xyz/kg)
-
+```
 # GitHub 直连
+```sh
 bash <(curl -sL https://raw.githubusercontent.com/chengege666/OpenWrt-APK/main/core/apk-opts.sh)
-
+```
 # Gitee 直连
+```sh
 bash <(curl -sL https://gitee.com/chengege666/OpenWrt-APK/raw/main/core/apk-opts.sh)
 ```
 
