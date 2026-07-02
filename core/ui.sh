@@ -15,6 +15,7 @@ show_main_menu() {
     echo "7.   查看系统信息"
     echo "8.   APK 安装参数 (--allow-untrusted)"
     echo "9.   软件源修改"
+    echo "10.  GitHub 下载加速"
     echo "00.  卸载脚本"
     echo "000. 更新脚本"
     echo "0.   退出"
@@ -106,6 +107,19 @@ show_repo_menu() {
     echo -e "  6.  测试源延迟"
     echo -e "  7.  更新软件源"
     echo -e "  8.  测速并自动应用最快源"
+    echo -e "  0.  返回上级"
+    echo ""
+}
+
+show_mirror_menu() {
+    echo "================================"
+    echo " GitHub 下载加速"
+    echo "================================"
+    echo ""
+    echo -e "  1.  开启加速（默认镜像: gh.1231818.xyz）"
+    echo -e "  2.  自定义镜像地址"
+    echo -e "  3.  关闭加速"
+    echo -e "  4.  查看当前状态"
     echo -e "  0.  返回上级"
     echo ""
 }

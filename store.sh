@@ -90,6 +90,9 @@ main_menu() {
             9)
                 modify_repo
                 ;;
+            10)
+                mirror_config_menu
+                ;;
             00)
                 uninstall_store
                 ;;
@@ -380,6 +383,59 @@ update_all() {
     echo " 全部更新完成"
     echo "================================"
     echo ""
+}
+
+mirror_config_menu() {
+    while true; do
+        show_mirror_menu
+        printf "请选择: "
+        read_input
+
+        case "$choice" in
+            1)
+                set_github_mirror
+                wait_for_enter
+                ;;
+            2)
+                echo ""
+                printf "请输入镜像地址（含 https://）: "
+                read -r custom_url < "$TTY" 2>/dev/null || read -r custom_url
+                custom_url=$(echo "$custom_url" | tr -d '\r\n ')
+
+                if [ -z "$custom_url" ]; then
+                    echo "[取消] 已取消"
+                else
+                    set_github_mirror "$custom_url"
+                fi
+                wait_for_enter
+                ;;
+            3)
+                disable_github_mirror
+                wait_for_enter
+                ;;
+            4)
+                echo ""
+                echo "================================"
+                echo " GitHub 镜像加速状态"
+                echo "================================"
+                if [ -n "$GITHUB_MIRROR" ]; then
+                    echo "  状态: 已启用"
+                    echo "  镜像: ${GITHUB_MIRROR}"
+                else
+                    echo "  状态: 未启用"
+                fi
+                echo ""
+                wait_for_enter
+                ;;
+            0)
+                return
+                ;;
+            *)
+                echo "[错误] 无效输入，请重新选择"
+                sleep 1
+                ;;
+        esac
+    done
 }
 
 uninstall_store() {
