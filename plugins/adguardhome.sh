@@ -31,9 +31,14 @@ install_adguardhome() {
             echo "[提示] 软件源中未找到 adguardhome 包，改用手动安装"
             install_adguardhome_manual "$arch" && return 0 || return 1
         fi
-        # 可选安装 LuCI 界面
+        # 可选安装 LuCI 界面及中文包
         apk add luci-app-adguardhome 2>/dev/null && echo "[成功] luci-app-adguardhome 安装完成" || \
-            echo "[提示] 软件源中未提供 luci-app-adguardhome，如需 Web 界面请访问 AdGuard Home 内置管理页面 (端口 3000)"
+            echo "[提示] 软件源中未提供 luci-app-adguardhome"
+        apk add luci-i18n-adguardhome-zh-cn 2>/dev/null && echo "[成功] luci-i18n-adguardhome-zh-cn 安装完成" || \
+            echo "[提示] 软件源中未提供 luci-i18n-adguardhome-zh-cn"
+        if ! apk info --installed luci-app-adguardhome >/dev/null 2>&1; then
+            echo "[提示] 如需 Web 界面请访问 AdGuard Home 内置管理页面 (端口 3000)"
+        fi
     else
         opkg update 2>/dev/null
         if opkg install adguardhome 2>/dev/null; then
@@ -43,7 +48,12 @@ install_adguardhome() {
             install_adguardhome_manual "$arch" && return 0 || return 1
         fi
         opkg install luci-app-adguardhome 2>/dev/null && echo "[成功] luci-app-adguardhome 安装完成" || \
-            echo "[提示] 软件源中未提供 luci-app-adguardhome，如需 Web 界面请访问 AdGuard Home 内置管理页面 (端口 3000)"
+            echo "[提示] 软件源中未提供 luci-app-adguardhome"
+        opkg install luci-i18n-adguardhome-zh-cn 2>/dev/null && echo "[成功] luci-i18n-adguardhome-zh-cn 安装完成" || \
+            echo "[提示] 软件源中未提供 luci-i18n-adguardhome-zh-cn"
+        if ! opkg list-installed 2>/dev/null | grep -q "^luci-app-adguardhome"; then
+            echo "[提示] 如需 Web 界面请访问 AdGuard Home 内置管理页面 (端口 3000)"
+        fi
     fi
 
     echo "[修复] 修复依赖..."
