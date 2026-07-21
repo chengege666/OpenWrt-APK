@@ -44,6 +44,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/passwall.sh"
 . "${SCRIPT_DIR}/plugins/nikki.sh"
 . "${SCRIPT_DIR}/plugins/adguardhome.sh"
+. "${SCRIPT_DIR}/plugins/oxidns.sh"
 
 
 TTY="/dev/tty"
@@ -185,6 +186,10 @@ install_plugin_menu() {
                 install_adguardhome
                 wait_for_enter
                 ;;
+            17)
+                install_oxidns
+                wait_for_enter
+                ;;
             
             0)
                 return
@@ -266,6 +271,10 @@ uninstall_menu() {
                 ;;
             16)
                 uninstall_adguardhome
+                wait_for_enter
+                ;;
+            17)
+                uninstall_oxidns
                 wait_for_enter
                 ;;
             
@@ -351,6 +360,10 @@ update_menu() {
                 update_adguardhome
                 wait_for_enter
                 ;;
+            18)
+                update_oxidns
+                wait_for_enter
+                ;;
             16)
                 update_all
                 wait_for_enter
@@ -391,6 +404,7 @@ update_all() {
     update_passwall
     update_nikki
     update_adguardhome
+    update_oxidns
 
     echo ""
     echo "================================"
