@@ -130,8 +130,32 @@ uninstall_wechatpush() {
     echo "================================"
     echo ""
 
-    uninstall_plugin "luci-app-wechatpush"
-    uninstall_plugin "luci-i18n-wechatpush-zh-cn"
+    # 1. APK 包管理器强制卸载（去掉 2>/dev/null，错误可见）
+    echo "[卸载] apk: 正在卸载 luci-app-wechatpush..."
+    apk del --purge luci-app-wechatpush 2>&1
+    echo "[卸载] apk: 正在卸载 luci-i18n-wechatpush-zh-cn..."
+    apk del --purge luci-i18n-wechatpush-zh-cn 2>&1
+    apk del --purge luci-i18n-wechatpush 2>&1
+    apk del --purge wechatpush 2>&1
+
+    # 2. 暴力清理残留文件（覆盖 --force-overwrite 强装但数据库无记录的情况）
+    echo "[清理] 正在清理残留文件..."
+    rm -rf /usr/lib/lua/luci/controller/*wechatpush* 2>/dev/null
+    rm -rf /usr/lib/lua/luci/model/cbi/*wechatpush* 2>/dev/null
+    rm -rf /usr/lib/lua/luci/view/*wechatpush* 2>/dev/null
+    rm -rf /usr/lib/lua/luci/i18n/*wechatpush* 2>/dev/null
+    rm -rf /usr/share/luci/menu.d/*wechatpush* 2>/dev/null
+    rm -rf /usr/share/rpcd/acl.d/*wechatpush* 2>/dev/null
+    rm -rf /www/luci-static/resources/*wechatpush* 2>/dev/null
+    rm -rf /etc/config/*wechatpush* 2>/dev/null
+    rm -rf /etc/init.d/*wechatpush* 2>/dev/null
+    rm -rf /usr/bin/*wechatpush* 2>/dev/null
+    rm -rf /usr/share/*wechatpush* 2>/dev/null
+    rm -rf /usr/lib/lua/*wechatpush* 2>/dev/null
+
+    # 3. 清理 LuCI 缓存并重启服务
+    echo "[重启] 正在重启 LuCI..."
+    restart_luci
 
     show_success
 }
