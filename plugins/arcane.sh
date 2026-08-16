@@ -62,6 +62,9 @@ EOF
     local status=$?
     if [ $status -eq 0 ]; then
         echo "[成功] Arcane 已启动，访问地址: http://<路由器IP>:3552"
+        echo "[账号] 默认用户名: arcane"
+        echo "[账号] 默认密码:   arcane-admin"
+        echo "[提示] 首次登录后会强制要求修改密码，请妥善保存。"
         show_success
     else
         echo "[错误] Arcane 启动失败。"
