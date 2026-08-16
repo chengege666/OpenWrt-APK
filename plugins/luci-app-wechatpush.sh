@@ -91,30 +91,141 @@ install_wechatpush() {
 
     echo "[安装] 正在安装..."
     local install_ok=0
+    local installed_list=""
+    local _out="/tmp/_wechatpush_install.log"
+    local _rc=0
     for f in "${download_dir}"/*.apk "${download_dir}"/*.ipk; do
         [ -f "$f" ] || continue
         case "$f" in
             *.apk)
                 echo "[安装] 安装 $(basename "$f")..."
-                if apk add --allow-untrusted --force-overwrite "$f" 2>/dev/null; then
+                apk add --allow-untrusted --force-overwrite "$f" >"$_out" 2>&1
+                _rc=$?
+                [ -s "$_out" ] && tail -5 "$_out"
+                if [ $_rc -eq 0 ]; then
                     install_ok=1
+                    installed_list="${installed_list} $(basename "$f" .apk)"
                 fi
                 ;;
             *.ipk)
                 echo "[安装] 安装 $(basename "$f")..."
-                if opkg install --force-overwrite "$f" 2>/dev/null; then
+                opkg install --force-overwrite "$f" >"$_out" 2>&1
+                _rc=$?
+                [ -s "$_out" ] && tail -5 "$_out"
+                if [ $_rc -eq 0 ]; then
                     install_ok=1
+                    installed_list="${installed_list} $(basename "$f" .ipk)"
                 fi
                 ;;
         esac
     done
+    rm -f "$_out"
 
     if [ "$install_ok" -eq 0 ]; then
         echo "[错误] 安装失败"
         return 1
     fi
 
+    # [新增] 文件落盘验证 + 重装兜底（覆盖 "包名已登记但文件未写入" 的异常场景）
+    echo "[验证] 检查关键文件是否落盘..."
+    local verify_menu verify_acl verify_view
+    verify_menu=$(ls /usr/share/luci/menu.d/*wechatpush* 2>/dev/null | head -1)
+    verify_acl=$(ls /usr/share/rpcd/acl.d/*wechatpush* 2>/dev/null | head -1)
+    verify_view=$(ls /www/luci-static/resources/view/wechatpush/*.js 2>/dev/null | head -1)
+
+    if [ -z "$verify_menu" ] || [ -z "$verify_acl" ] || [ -z "$verify_view" ]; then
+        echo "[警告] 检测到关键文件未完整落盘（menu:$verify_menu acl:$verify_acl view:$verify_view）"
+        echo "[修复] 执行兜底重装：先卸载 + 清残留 + 再安装..."
+
+        # 备份用户配置（如果存在）
+        [ -f /etc/config/wechatpush ] && cp -f /etc/config/wechatpush /etc/config/wechatpush.bak 2>/dev/null
+
+        # APK 模式兜底
+        if command -v apk >/dev/null 2>&1; then
+            apk del --purge luci-app-wechatpush 2>&1 | tail -3
+            apk del --purge luci-i18n-wechatpush-zh-cn 2>&1 | tail -3
+        # IPK 模式兜底
+        elif command -v opkg >/dev/null 2>&1; then
+            opkg remove --force-remove --force-depends luci-app-wechatpush 2>&1 | tail -3
+            opkg remove --force-remove --force-depends luci-i18n-wechatpush-zh-cn 2>&1 | tail -3
+        fi
+
+        # 暴力清残留
+        rm -rf /usr/share/luci/menu.d/*wechatpush* \
+               /usr/share/rpcd/acl.d/*wechatpush* \
+               /www/luci-static/resources/view/wechatpush \
+               /usr/share/wechatpush \
+               /usr/libexec/wechatpush-call \
+               /usr/lib/lua/luci/controller/*wechatpush* \
+               /usr/lib/lua/luci/model/cbi/*wechatpush* \
+               /usr/lib/lua/luci/view/*wechatpush* \
+               /usr/lib/lua/luci/i18n/*wechatpush* \
+               /usr/bin/*wechatpush* \
+               /usr/lib/lua/*wechatpush* 2>/dev/null
+        # 保留 config/init.d（后面重装会释放）避免路径冲突
+        rm -f /etc/config/wechatpush /etc/init.d/wechatpush /etc/uci-defaults/luci-wechatpush 2>/dev/null
+
+        # 再次安装
+        echo "[修复] 重新安装下载包..."
+        local retry_ok=0
+        local _retry_out="/tmp/_wechatpush_retry.log"
+        local _retry_rc=0
+        for f in "${download_dir}"/*.apk "${download_dir}"/*.ipk; do
+            [ -f "$f" ] || continue
+            case "$f" in
+                *.apk)
+                    echo "[安装] 重装 $(basename "$f")..."
+                    apk add --allow-untrusted --force-overwrite "$f" >"$_retry_out" 2>&1
+                    _retry_rc=$?
+                    [ -s "$_retry_out" ] && tail -5 "$_retry_out"
+                    if [ $_retry_rc -eq 0 ]; then
+                        retry_ok=1
+                    fi
+                    ;;
+                *.ipk)
+                    echo "[安装] 重装 $(basename "$f")..."
+                    opkg install --force-overwrite "$f" >"$_retry_out" 2>&1
+                    _retry_rc=$?
+                    [ -s "$_retry_out" ] && tail -5 "$_retry_out"
+                    if [ $_retry_rc -eq 0 ]; then
+                        retry_ok=1
+                    fi
+                    ;;
+            esac
+        done
+        rm -f "$_retry_out"
+
+        # 恢复用户配置
+        if [ -f /etc/config/wechatpush.bak ]; then
+            [ ! -f /etc/config/wechatpush ] || mv -f /etc/config/wechatpush /etc/config/wechatpush.pkgnew 2>/dev/null
+            mv -f /etc/config/wechatpush.bak /etc/config/wechatpush 2>/dev/null
+            echo "[恢复] 已还原原 /etc/config/wechatpush 配置"
+        fi
+
+        # 二次验证
+        verify_menu=$(ls /usr/share/luci/menu.d/*wechatpush* 2>/dev/null | head -1)
+        verify_acl=$(ls /usr/share/rpcd/acl.d/*wechatpush* 2>/dev/null | head -1)
+        if [ -z "$verify_menu" ] || [ -z "$verify_acl" ]; then
+            echo "[错误] 兜底重装后关键文件仍缺失，建议手动检查文件系统或改用 tar 直接解包 APK"
+            echo "[提示] 手动解包命令: tar -xzf ${download_dir}/luci-app-wechatpush-*.apk -C /"
+            return 1
+        fi
+
+        if [ "$retry_ok" -eq 0 ]; then
+            echo "[错误] 兜底重装失败"
+            return 1
+        fi
+        echo "[成功] 兜底重装完成"
+    else
+        echo "[成功] 关键文件验证通过"
+    fi
+
     echo "[修复] 修复依赖..."
+    # APK 模式直接执行 apk fix（不再依赖 fix_dependencies 的跳过逻辑）
+    if command -v apk >/dev/null 2>&1; then
+        echo "[修复] 执行 apk fix..."
+        apk fix 2>&1 | tail -10
+    fi
     fix_dependencies
 
     echo "[重启] 重启 LuCI..."

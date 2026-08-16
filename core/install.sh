@@ -117,8 +117,16 @@ fix_dependencies() {
 restart_luci() {
     echo "[重启] 正在重启 LuCI 服务..."
 
-    # 彻底清除 LuCI 缓存（包括 ucitrack 索引）
-    rm -rf /tmp/luci-* /tmp/.luci* /tmp/etc/config/ucitrack /var/run/luci-indexcache /tmp/luci-modulecache 2>/dev/null
+    # 彻底清除 LuCI 缓存（包括 ucitrack 索引、indexcache 随机后缀、Lua 侧缓存）
+    rm -rf /tmp/luci-* /tmp/.luci* /tmp/etc/config/ucitrack \
+           /var/run/luci-indexcache /var/run/luci-* \
+           /tmp/luci-modulecache /tmp/luci-indexcache.* \
+           /usr/lib/lua/luci/luci.indexcache 2>/dev/null
+
+    # 优先调用 luci-reload 工具重建菜单索引（若存在）
+    if command -v luci-reload >/dev/null 2>&1; then
+        luci-reload 2>/dev/null || true
+    fi
 
     if [ -x /etc/init.d/rpcd ]; then
         /etc/init.d/rpcd restart 2>/dev/null
