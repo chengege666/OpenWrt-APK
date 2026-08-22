@@ -8,6 +8,13 @@ install_adguardhome() {
     echo "================================"
     echo ""
 
+    # 清理 adguardhome 专属缓存，确保获取最新版本
+    local cache_dir="${CACHE_DIR}/adguardhome"
+    if [ -d "$cache_dir" ]; then
+        echo "[清理] 清理 adguardhome 旧缓存..."
+        rm -rf "$cache_dir"
+    fi
+
     local arch
     arch=$(detect_arch) || return 1
     echo "[架构] $arch"
@@ -210,6 +217,10 @@ INITEOF
     echo "  首次配置请访问: http://$(ip route get 1 2>/dev/null | grep src= | awk '{print $7}'):3000"
     echo "  或访问路由器 IP:3000 进行初始化设置"
     echo "========================================"
+    echo ""
+    echo "[提示] 关于语言与界面:"
+    echo "  1. 原生 Web UI (端口 3000) 首次为英文，可在 Settings -> General -> Language 切换中文"
+    echo "  2. 若已安装 luci-app-adguardhome，请访问 LuCI 管理界面 (端口 80) 使用中文控制台"
     echo ""
 
     echo "[重启] 重启 LuCI..."
