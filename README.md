@@ -57,38 +57,7 @@ chmod +x store.sh
 ./store.sh
 ```
 
-## 目录结构
 
-```
-OpenWrt-APK/
-├── store.sh              # 主安装器（交互式菜单）
-├── install.sh            # 一键安装脚本
-├── core/
-│   ├── network.sh        # 网络工具模块（下载/缓存/网络检测）
-│   ├── github.sh         # GitHub Releases API 模块
-│   ├── install.sh        # 安装/卸载/重启模块
-│   ├── ui.sh             # 用户界面模块
-│   ├── system-init.sh    # 系统初始化（时区/中文/SFTP/工具）
-│   ├── expand-overlay.sh # Overlay 扩容 & 还原
-│   ├── doctor.sh         # 系统信息查看
-│   └── apk-opts.sh       # APK 安装参数配置（--allow-untrusted 开关）
-└── plugins/
-    ├── openclash.sh          # OpenClash
-    ├── passwall.sh           # PassWall
-    ├── passwall2.sh          # PassWall2
-    ├── mosdns.sh             # MosDNS
-    ├── docker.sh             # Docker
-    ├── smartdns.sh           # SmartDNS
-    ├── lucky.sh              # Lucky
-    ├── daed.sh               # Daed
-    ├── nikki.sh              # Nikki
-    ├── taskplan.sh           # TaskPlan
-    ├── istore.sh             # iStore
-    ├── luci-app-diskman.sh   # DiskMan
-    ├── luci-app-wechatpush.sh# WeChatPush
-    ├── luci-theme-argon.sh   # Argon 主题
-    └── luci-theme-aurora.sh  # Aurora 主题
-```
 
 ## 主菜单
 
@@ -219,67 +188,7 @@ apk add $(apk_get_opts) /path/to/package.apk
 | Argon 主题 | 后台主题美化 |
 | Aurora 主题 | 后台主题美化 |
 
-## 添加新插件
 
-在 `plugins/` 目录下创建新的插件脚本，参考现有插件模板：
-
-```sh
-#!/bin/sh
-# plugins/your_plugin.sh
-
-install_your_plugin() {
-    local owner="owner"
-    local repo="repo"
-    local plugin_name="plugin"
-
-    # 获取最新 Release
-    local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || return 1
-
-    local tag
-    tag=$(get_release_tag "$release_json")
-    echo "[版本] $tag"
-
-    # 获取下载链接
-    local all_urls
-    all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
-
-    # 过滤并下载
-    local url
-    url=$(echo "$all_urls" | grep "xxx.apk" | head -1)
-    # ... 下载、安装逻辑
-}
-
-uninstall_your_plugin() {
-    uninstall_plugin "luci-app-xxx"
-}
-
-update_your_plugin() {
-    cleanup_old_cache
-    install_your_plugin
-}
-```
-
-然后在 `store.sh` 中引入并添加到菜单。
-
-### 核心函数说明
-
-| 函数 | 说明 |
-|------|------|
-| `get_latest_release owner/repo` | 获取最新 Release JSON |
-| `get_release_tag json` | 提取版本号 |
-| `get_download_urls json owner repo tag` | 获取所有下载链接（含 HTML 回退机制） |
-| `download_file url output_path` | 下载文件（含镜像加速、重试） |
-| `fix_dependencies` | 修复依赖 |
-| `restart_luci` | 重启 LuCI 界面 |
-
-## 技术栈
-
-- Shell（兼容 BusyBox ash）
-- wget / curl
-- GitHub API
-- APK / OPKG 包管理
-- parted / ext4 / overlayfs
 
 ## 许可证
 
