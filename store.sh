@@ -47,6 +47,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/oxidns.sh"
 . "${SCRIPT_DIR}/plugins/arcane.sh"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-cloudflared.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-cloudflared.sh"
+[ -f "${SCRIPT_DIR}/plugins/luci-app-run.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-run.sh"
 
 
 TTY="/dev/tty"
@@ -200,6 +201,10 @@ install_plugin_menu() {
                 install_cloudflared
                 wait_for_enter
                 ;;
+            20)
+                install_run
+                wait_for_enter
+                ;;
             
             0)
                 return
@@ -293,6 +298,10 @@ uninstall_menu() {
                 ;;
             19)
                 uninstall_cloudflared
+                wait_for_enter
+                ;;
+            20)
+                uninstall_run
                 wait_for_enter
                 ;;
             
@@ -390,6 +399,10 @@ update_menu() {
                 update_cloudflared
                 wait_for_enter
                 ;;
+            21)
+                update_run
+                wait_for_enter
+                ;;
             16)
                 update_all
                 wait_for_enter
@@ -433,6 +446,7 @@ update_all() {
     update_oxidns
     update_arcane
     update_cloudflared
+    update_run
 
     echo ""
     echo "================================"
