@@ -1,0 +1,79 @@
+name: Fetch Uninstall Plugin
+
+# 从 xz.vumstar.com 拉取「高级卸载」插件并发布到本仓库 Release 页
+# 插件官网: https://xz.vumstar.com/
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # 每日 UTC 4:00（北京时间 12:00）检查一次
+  workflow_dispatch:      # 支持手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 获取最新版本号
+        id: version
+        run: |
+          HTML=$(curl -sL --max-time 30 https://xz.vumstar.com/)
+          VER=$(echo "$HTML" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          if [ -z "$VER" ]; then
+            echo "::error::无法从页面解析版本号，可能是页面结构变更"
+            exit 1
+          fi
+          echo "版本号: $VER"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: 下载插件文件
+        run: |
+          mkdir -p dist
+          curl -sL --max-time 180 --retry 3 --retry-delay 5 \
+            -o dist/luci-app-uninstall.run \
+            "https://plugin.vumstar.com/download/luci-app-uninstall.run"
+          curl -sL --max-time 180 --retry 3 --retry-delay 5 \
+            -o dist/luci-app-uninstall.apk \
+            "https://plugin.vumstar.com/download/luci-app-uninstall.apk"
+
+          for f in dist/luci-app-uninstall.run dist/luci-app-uninstall.apk; do
+            if [ ! -s "$f" ]; then
+              echo "::error::$f 下载失败（文件为空）"
+              exit 1
+            fi
+            SIZE=$(stat -c%s "$f")
+            if [ "$SIZE" -lt 1000000 ]; then
+              echo "::error::$f 文件过小（$SIZE 字节），疑似下载不完整"
+              exit 1
+            fi
+          done
+
+          # 校验 .run 为 Makeself 自解压脚本
+          if ! head -1 dist/luci-app-uninstall.run | grep -q "shell script\|/bin/sh"; then
+            echo "::error::luci-app-uninstall.run 内容异常（非 shell 脚本）"
+            exit 1
+          fi
+
+          echo "SHA256 校验和:"
+          sha256sum dist/*
+
+      - name: 检查并发布 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="uninstall-${{ steps.version.outputs.version }}"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release $TAG 已存在，跳过发布"
+            exit 0
+          fi
+
+          gh release create "$TAG" dist/luci-app-uninstall.run dist/luci-app-uninstall.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "高级卸载 ${{ steps.version.outputs.version }}" \
+            --notes "高级卸载 For iStoreOS ${{ steps.version.outputs.version }}
+
+          - 来源: https://xz.vumstar.com/
+          - luci-app-uninstall.run: iStoreOS / opkg 系统使用
+          - luci-app-uninstall.apk: OpenWrt 25.x / apk 系统使用"

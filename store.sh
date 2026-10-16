@@ -48,6 +48,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "${SCRIPT_DIR}/plugins/arcane.sh"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-cloudflared.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-cloudflared.sh"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-run.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-run.sh"
+[ -f "${SCRIPT_DIR}/plugins/luci-app-uninstall.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-uninstall.sh"
 
 
 TTY="/dev/tty"
@@ -205,7 +206,11 @@ install_plugin_menu() {
                 install_run
                 wait_for_enter
                 ;;
-            
+            21)
+                install_uninstall_plugin
+                wait_for_enter
+                ;;
+
             0)
                 return
                 ;;
@@ -304,7 +309,11 @@ uninstall_menu() {
                 uninstall_run
                 wait_for_enter
                 ;;
-            
+            21)
+                uninstall_uninstall_plugin
+                wait_for_enter
+                ;;
+
             0)
                 return
                 ;;
@@ -403,6 +412,10 @@ update_menu() {
                 update_run
                 wait_for_enter
                 ;;
+            22)
+                update_uninstall_plugin
+                wait_for_enter
+                ;;
             16)
                 update_all
                 wait_for_enter
@@ -447,6 +460,7 @@ update_all() {
     update_arcane
     update_cloudflared
     update_run
+    update_uninstall_plugin
 
     echo ""
     echo "================================"

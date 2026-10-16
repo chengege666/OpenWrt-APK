@@ -38,6 +38,7 @@ show_install_plugin_menu() {
     echo -e "  15. Nikki (科学上网)           16. AdGuardHome (广告过滤)"
     echo -e "  17. OxiDNS (DNS解析)           18. Arcane (Docker面板)"
     echo -e "  19. Cloudflared (隧道)         20. Run (脚本执行器)"
+    echo -e "  21. 高级卸载 (彻底卸载插件)"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -77,6 +78,7 @@ show_uninstall_menu() {
     echo -e "  15. 卸载 Nikki (科学上网)       16. 卸载 AdGuardHome (广告过滤)"
     echo -e "  17. 卸载 OxiDNS (DNS解析)       18. 卸载 Arcane (Docker面板)"
     echo -e "  19. 卸载 Cloudflared (隧道)     20. 卸载 Run (脚本执行器)"
+    echo -e "  21. 卸载 高级卸载 (彻底卸载插件)"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -96,6 +98,7 @@ show_update_menu() {
     echo -e "  15. 更新 Nikki (科学上网)       17. 更新 AdGuardHome (广告过滤)"
     echo -e "  18. 更新 OxiDNS (DNS解析)       19. 更新 Arcane (Docker面板)"
     echo -e "  20. 更新 Cloudflared (隧道)     21. 更新 Run (脚本执行器)"
+    echo -e "  22. 更新 高级卸载 (彻底卸载插件)"
     echo -e "  16. 更新全部"
 echo -e "  0.  返回上级"
     echo ""
