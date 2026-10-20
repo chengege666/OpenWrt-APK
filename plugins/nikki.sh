@@ -88,30 +88,54 @@ install_nikki() {
 
     local apk_files=""
     local ipk_files=""
+    local mihomo_alpha="" mihomo_meta="" nikki_pkg="" luci_pkg="" i18n_pkgs=""
     for f in $pkg_files; do
-        case "$f" in
+        case "$(basename "$f")" in
             *.apk) apk_files="$apk_files $f" ;;
             *.ipk) ipk_files="$ipk_files $f" ;;
         esac
+        case "$(basename "$f")" in
+            mihomo-alpha-*)   mihomo_alpha="$f" ;;
+            mihomo-meta-*)    mihomo_meta="$f" ;;
+            nikki-*)          nikki_pkg="$f" ;;
+            luci-app-nikki-*) luci_pkg="$f" ;;
+            luci-i18n-*)      i18n_pkgs="$i18n_pkgs $f" ;;
+        esac
     done
+
+    # 按依赖顺序排列：内核 -> nikki -> luci-app-nikki -> i18n
+    # mihomo-alpha 与 mihomo-meta 互斥（都提供 mihomo），默认用 alpha
+    local ordered_pkgs="$mihomo_alpha $nikki_pkg $luci_pkg $i18n_pkgs"
 
     local install_ok=0
     if [ -n "$apk_files" ]; then
-        echo "[安装] 批量安装 APK 包..."
-        if apk add --allow-untrusted --force-overwrite $apk_files; then
+        echo "[安装] 批量安装 APK 包（按依赖顺序，跳过互斥的 mihomo-meta）..."
+        if apk add --allow-untrusted --force-overwrite $ordered_pkgs; then
             install_ok=1
         else
-            echo "[错误] 批量安装失败，尝试逐个安装..."
-            for f in $apk_files; do
+            echo "[提示] 批量安装失败，改为按依赖顺序逐个安装..."
+            for f in $ordered_pkgs; do
                 echo "[安装] 安装 $(basename "$f")..."
-                if apk add --allow-untrusted --force-overwrite "$f"; then
-                    install_ok=1
-                fi
+                apk add --allow-untrusted --force-overwrite "$f" || echo "[警告] $(basename "$f") 安装失败，继续后续包"
             done
+        fi
+
+        # mihomo 内核兜底：alpha 与系统已有 mihomo 冲突时尝试 meta
+        if ! apk info -e mihomo-alpha >/dev/null 2>&1 && ! apk info -e mihomo-meta >/dev/null 2>&1 && [ -n "$mihomo_meta" ]; then
+            echo "[安装] 未检测到 mihomo 内核，尝试安装 mihomo-meta..."
+            apk add --allow-untrusted --force-overwrite "$mihomo_meta" || echo "[警告] mihomo-meta 安装失败"
+        fi
+
+        # 核心包校验（i18n 语言包缺失不算失败）
+        if apk info -e nikki >/dev/null 2>&1 && apk info -e luci-app-nikki >/dev/null 2>&1; then
+            install_ok=1
+        else
+            install_ok=0
         fi
     fi
     if [ -n "$ipk_files" ]; then
-        for f in $ipk_files; do
+        echo "[安装] 按依赖顺序逐个安装 IPK 包..."
+        for f in $ordered_pkgs; do
             echo "[安装] 安装 $(basename "$f")..."
             if opkg install --force-overwrite "$f"; then
                 install_ok=1
