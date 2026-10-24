@@ -401,36 +401,32 @@ update_menu() {
                 update_nikki
                 wait_for_enter
                 ;;
-            17)
+            16)
                 update_adguardhome
                 wait_for_enter
                 ;;
-            18)
+            17)
                 update_oxidns
                 wait_for_enter
                 ;;
-            19)
+            18)
                 update_arcane
                 wait_for_enter
                 ;;
-            20)
+            19)
                 update_cloudflared
                 wait_for_enter
                 ;;
-            21)
+            20)
                 update_run
                 wait_for_enter
                 ;;
-            22)
+            21)
                 update_uninstall_plugin
                 wait_for_enter
                 ;;
-            23)
+            22)
                 update_momo
-                wait_for_enter
-                ;;
-            16)
-                update_all
                 wait_for_enter
                 ;;
             0)
@@ -442,45 +438,6 @@ update_menu() {
                 ;;
         esac
     done
-}
-
-update_all() {
-    echo ""
-    echo "================================"
-    echo " 更新全部插件"
-    echo "================================"
-    echo ""
-
-    cleanup_old_cache
-
-    update_openclash
-    update_mosdns
-    update_docker
-    update_luci_theme_aurora
-    update_luci_theme_argon
-    update_lucky
-    update_taskplan
-    update_passwall2
-    update_smartdns
-    update_daed
-    update_istore
-    update_diskman
-    update_wechatpush
-    update_passwall
-    update_nikki
-    update_adguardhome
-    update_oxidns
-    update_arcane
-    update_cloudflared
-    update_run
-    update_uninstall_plugin
-    update_momo
-
-    echo ""
-    echo "================================"
-    echo " 全部更新完成"
-    echo "================================"
-    echo ""
 }
 
 mirror_config_menu() {
