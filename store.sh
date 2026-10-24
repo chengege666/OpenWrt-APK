@@ -49,6 +49,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-cloudflared.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-cloudflared.sh"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-run.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-run.sh"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-uninstall.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-uninstall.sh"
+[ -f "${SCRIPT_DIR}/plugins/momo.sh" ] && . "${SCRIPT_DIR}/plugins/momo.sh"
 
 
 TTY="/dev/tty"
@@ -210,6 +211,10 @@ install_plugin_menu() {
                 install_uninstall_plugin
                 wait_for_enter
                 ;;
+            22)
+                install_momo
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -311,6 +316,10 @@ uninstall_menu() {
                 ;;
             21)
                 uninstall_uninstall_plugin
+                wait_for_enter
+                ;;
+            22)
+                uninstall_momo
                 wait_for_enter
                 ;;
 
@@ -416,6 +425,10 @@ update_menu() {
                 update_uninstall_plugin
                 wait_for_enter
                 ;;
+            23)
+                update_momo
+                wait_for_enter
+                ;;
             16)
                 update_all
                 wait_for_enter
@@ -461,6 +474,7 @@ update_all() {
     update_cloudflared
     update_run
     update_uninstall_plugin
+    update_momo
 
     echo ""
     echo "================================"
