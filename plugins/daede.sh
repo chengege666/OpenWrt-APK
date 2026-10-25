@@ -81,20 +81,22 @@ install_daede() {
     rm -rf "$download_dir"
     mkdir -p "$download_dir"
 
-    # 按架构筛选下载 URL
-    local daed_url luci_url btf_url
+    # 按架构筛选下载 URL（dae- 与 daed- 前缀不冲突：模式中的分隔符保证精确匹配）
+    local dae_url daed_url luci_url btf_url
     if [ "$is_apk" -eq 1 ]; then
+        dae_url=$(echo "$all_urls"  | grep "^.*dae-.*-${file_arch}\.apk$" | head -1)
         daed_url=$(echo "$all_urls" | grep "^.*daed-.*-${file_arch}\.apk$" | head -1)
         luci_url=$(echo "$all_urls" | grep "^.*luci-app-daede-.*-${file_arch}\.apk$" | head -1)
         btf_url=$(echo "$all_urls"  | grep "^.*vmlinux-btf-.*-${file_arch}\.apk$" | head -1)
     else
+        dae_url=$(echo "$all_urls"  | grep "^.*dae_.*_${file_arch}\.ipk$" | head -1)
         daed_url=$(echo "$all_urls" | grep "^.*daed_.*_${file_arch}\.ipk$" | head -1)
         luci_url=$(echo "$all_urls" | grep "^.*luci-app-daede_.*_all\.ipk$" | head -1)
         btf_url=$(echo "$all_urls"  | grep "^.*vmlinux-btf_.*_${file_arch}\.ipk$" | head -1)
     fi
 
-    if [ -z "$daed_url" ] || [ -z "$luci_url" ]; then
-        echo "[错误] 未找到架构 ${file_arch} 的 daed / luci-app-daede 包"
+    if [ -z "$dae_url" ] || [ -z "$daed_url" ] || [ -z "$luci_url" ]; then
+        echo "[错误] 未找到架构 ${file_arch} 的 dae / daed / luci-app-daede 包"
         echo "[调试] 该版本可用链接(前 10):"
         echo "$all_urls" | head -10
         rm -rf "$download_dir"
@@ -102,9 +104,13 @@ install_daede() {
     fi
 
     # 逐个下载（vmlinux-btf 缺失只警告不阻断，部分内核已内置 BTF）
-    local f_daed f_luci f_btf
+    local f_dae f_daed f_luci f_btf
+    f_dae="${download_dir}/$(basename "$dae_url")"
     f_daed="${download_dir}/$(basename "$daed_url")"
     f_luci="${download_dir}/$(basename "$luci_url")"
+
+    echo "[下载] $(basename "$dae_url")"
+    download_file "$dae_url" "$f_dae" || { echo "[错误] dae 下载失败"; rm -rf "$download_dir"; return 1; }
 
     echo "[下载] $(basename "$daed_url")"
     download_file "$daed_url" "$f_daed" || { echo "[错误] daed 下载失败"; rm -rf "$download_dir"; return 1; }
@@ -120,24 +126,27 @@ install_daede() {
         echo "[提示] 未找到匹配内核的 vmlinux-btf，依赖系统自带 BTF"
     fi
 
-    # 按依赖顺序安装：vmlinux-btf -> daed -> luci-app-daede
+    # 按依赖顺序安装：vmlinux-btf -> dae -> daed -> luci-app-daede
     local install_ok=0
     if [ "$is_apk" -eq 1 ]; then
         echo "[安装] 批量安装 APK 包..."
         local pkgs=""
         [ -n "$f_btf" ] && pkgs="$f_btf "
-        pkgs="${pkgs}${f_daed} ${f_luci}"
+        pkgs="${pkgs}${f_dae} ${f_daed} ${f_luci}"
         if apk add --allow-untrusted --force-overwrite $pkgs; then
             install_ok=1
         else
             echo "[提示] 批量安装失败，改为逐个安装..."
             [ -n "$f_btf" ] && apk add --allow-untrusted --force-overwrite "$f_btf" 2>/dev/null
+            apk add --allow-untrusted --force-overwrite "$f_dae" && \
             apk add --allow-untrusted --force-overwrite "$f_daed" && \
             apk add --allow-untrusted --force-overwrite "$f_luci" && install_ok=1
         fi
 
         # 核心包校验
-        if apk info -e daed >/dev/null 2>&1 && apk info -e luci-app-daede >/dev/null 2>&1; then
+        if apk info -e dae >/dev/null 2>&1 && \
+           apk info -e daed >/dev/null 2>&1 && \
+           apk info -e luci-app-daede >/dev/null 2>&1; then
             install_ok=1
         else
             install_ok=0
@@ -145,7 +154,8 @@ install_daede() {
     else
         echo "[安装] 逐个安装 IPK 包..."
         [ -n "$f_btf" ] && opkg install --force-overwrite "$f_btf" 2>/dev/null
-        if opkg install --force-overwrite "$f_daed" && \
+        if opkg install --force-overwrite "$f_dae" && \
+           opkg install --force-overwrite "$f_daed" && \
            opkg install --force-overwrite "$f_luci"; then
             install_ok=1
         fi
