@@ -161,6 +161,9 @@ install_daede() {
     echo "[修复] 修复依赖..."
     fix_dependencies
 
+    # 配置公开软件源（LuCI 在线更新）
+    config_daede_feed
+
     # 启用 daed 服务
     if [ -f "/etc/init.d/daed" ]; then
         echo "[启用] 启用 daed 服务..."
@@ -196,6 +199,9 @@ uninstall_daede() {
     uninstall_plugin "daed"
     uninstall_plugin "dae"
 
+    # 移除软件源配置
+    remove_daede_feed
+
     echo "[重启] 重启 LuCI..."
     restart_luci
 
@@ -211,4 +217,85 @@ update_daede() {
 
     cleanup_old_cache
     install_daede
+}
+
+# 配置 dllkids 公开软件源（LuCI 可在线检查更新）
+# 逻辑参照官方脚本: https://down.dllkids.xyz/openwrt-feed/openwrt-feed-setup.sh
+config_daede_feed() {
+    echo "[软件源] 配置 daede 公开软件源..."
+
+    local base_url="https://down.dllkids.xyz/openwrt-feed"
+    local feed_arch=""
+    local f=""
+
+    if [ "$is_apk" -eq 1 ]; then
+        # apk：读 DISTRIB_ARCH（完整 target arch，如 x86_64 / aarch64_cortex-a53）
+        feed_arch=$(sed -n "s/^DISTRIB_ARCH=['\"]\([^'\"]*\)['\"].*/\1/p" /etc/openwrt_release 2>/dev/null | head -n1)
+        [ -n "$feed_arch" ] || feed_arch="$file_arch"
+
+        # 检测索引是否存在，aarch64 回退 generic
+        if ! wget -q -O /dev/null --timeout=15 "${base_url}/25.12/${feed_arch}/packages.adb" 2>/dev/null; then
+            case "$feed_arch" in
+                aarch64*|arm64*)
+                    echo "[提示] 无 ${feed_arch} 源，回退 aarch64_generic"
+                    feed_arch="aarch64_generic" ;;
+            esac
+        fi
+
+        # 下载签名公钥
+        mkdir -p /etc/apk/keys
+        if wget -q --timeout=15 -O /etc/apk/keys/dllkids-feed.pub.pem "${base_url}/keys/dllkids-feed.pub.pem" 2>/dev/null; then
+            chmod 644 /etc/apk/keys/dllkids-feed.pub.pem 2>/dev/null
+        else
+            echo "[警告] 公钥下载失败，源将按未签名处理"
+        fi
+
+        # 清理旧配置行后写入 customfeeds.list
+        mkdir -p /etc/apk/repositories.d
+        for f in /etc/apk/repositories /etc/apk/repositories.d/*.list; do
+            [ -e "$f" ] || continue
+            grep -vF 'down.dllkids.xyz/openwrt-feed/' "$f" > "${f}.tmp" 2>/dev/null || true
+            mv "${f}.tmp" "$f"
+        done
+        echo "${base_url}/25.12/${feed_arch}/packages.adb" >> /etc/apk/repositories.d/customfeeds.list
+
+        echo "[软件源] 已写入: ${base_url}/25.12/${feed_arch}/packages.adb"
+        apk update 2>/dev/null || apk update --allow-untrusted 2>/dev/null || \
+            echo "[警告] apk update 失败，稍后可手动执行: apk update"
+    else
+        # opkg：取优先级最高的非 all/noarch 架构
+        feed_arch=$(opkg print-architecture 2>/dev/null | awk '$1=="arch" && $2!="all" && $2!="noarch" { if ($3+0>best) { best=$3+0; a=$2 } } END { if (a!="") print a; else print "all" }')
+        [ -n "$feed_arch" ] || feed_arch="all"
+
+        if wget -q --timeout=15 -O /tmp/dllkids-feed.pub "${base_url}/keys/dllkids-feed.pub" 2>/dev/null; then
+            opkg-key add /tmp/dllkids-feed.pub 2>/dev/null
+            rm -f /tmp/dllkids-feed.pub
+        else
+            echo "[警告] 公钥下载失败"
+        fi
+
+        touch /etc/opkg/customfeeds.conf
+        grep -vF 'down.dllkids.xyz/openwrt-feed/' /etc/opkg/customfeeds.conf > /etc/opkg/customfeeds.conf.tmp 2>/dev/null || true
+        mv /etc/opkg/customfeeds.conf.tmp /etc/opkg/customfeeds.conf
+        echo "src/gz dllkids_feed ${base_url}/24.10/${feed_arch}" >> /etc/opkg/customfeeds.conf
+
+        echo "[软件源] 已写入: ${base_url}/24.10/${feed_arch}"
+        opkg update 2>/dev/null || echo "[警告] opkg update 失败，稍后可手动执行: opkg update"
+    fi
+}
+
+# 移除 dllkids 软件源配置与公钥
+remove_daede_feed() {
+    echo "[清理] 移除 daede 软件源配置..."
+
+    local f=""
+    for f in /etc/apk/repositories /etc/apk/repositories.d/*.list /etc/opkg/customfeeds.conf; do
+        [ -e "$f" ] || continue
+        if grep -qF 'down.dllkids.xyz/openwrt-feed/' "$f" 2>/dev/null; then
+            grep -vF 'down.dllkids.xyz/openwrt-feed/' "$f" > "${f}.tmp" 2>/dev/null || true
+            mv "${f}.tmp" "$f"
+            echo "[清理] 已清理: $f"
+        fi
+    done
+    rm -f /etc/apk/keys/dllkids-feed.pub.pem
 }
