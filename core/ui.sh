@@ -39,6 +39,7 @@ show_install_plugin_menu() {
     echo -e "  9.  SmartDNS (DNS加速)         20. Run (脚本执行器)"
     echo -e "  10. Daed (科学上网)            21. 高级卸载 (彻底卸载插件)"
     echo -e "  11. iStore (软件商店)          22. Momo (科学上网)"
+    echo -e "                                 23. Daede (dae/daed界面)"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -79,6 +80,7 @@ show_uninstall_menu() {
     echo -e "  9.  卸载 SmartDNS (DNS加速)        20. 卸载 Run (脚本执行器)"
     echo -e "  10. 卸载 Daed (科学上网)           21. 卸载 高级卸载 (彻底卸载插件)"
     echo -e "  11. 卸载 iStore (软件商店)         22. 卸载 Momo (科学上网)"
+    echo -e "                                     23. 卸载 Daede (dae/daed界面)"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -99,6 +101,7 @@ show_update_menu() {
     echo -e "  9.  更新 SmartDNS (DNS加速)        20. 更新 Run (脚本执行器)"
     echo -e "  10. 更新 Daed (科学上网)           21. 更新 高级卸载 (彻底卸载插件)"
     echo -e "  11. 更新 iStore (软件商店)         22. 更新 Momo (科学上网)"
+    echo -e "                                     23. 更新 Daede (dae/daed界面)"
     echo -e "  0.  返回上级"
     echo ""
 }

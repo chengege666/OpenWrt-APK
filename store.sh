@@ -50,6 +50,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-run.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-run.sh"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-uninstall.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-uninstall.sh"
 [ -f "${SCRIPT_DIR}/plugins/momo.sh" ] && . "${SCRIPT_DIR}/plugins/momo.sh"
+[ -f "${SCRIPT_DIR}/plugins/daede.sh" ] && . "${SCRIPT_DIR}/plugins/daede.sh"
 
 
 TTY="/dev/tty"
@@ -215,6 +216,10 @@ install_plugin_menu() {
                 install_momo
                 wait_for_enter
                 ;;
+            23)
+                install_daede
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -322,6 +327,10 @@ uninstall_menu() {
                 uninstall_momo
                 wait_for_enter
                 ;;
+            23)
+                uninstall_daede
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -427,6 +436,10 @@ update_menu() {
                 ;;
             22)
                 update_momo
+                wait_for_enter
+                ;;
+            23)
+                update_daede
                 wait_for_enter
                 ;;
             0)
