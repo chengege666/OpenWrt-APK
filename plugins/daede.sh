@@ -39,14 +39,42 @@ install_daede() {
     local plugin_name="daede"
 
     local release_json
-    release_json=$(get_latest_release "$owner" "$repo") || return 1
+    release_json=$(get_latest_release "$owner" "$repo") || true
 
-    local tag
-    tag=$(get_release_tag "$release_json")
+    local tag=""
+    if [ -n "$release_json" ]; then
+        tag=$(get_release_tag "$release_json")
+    fi
+
+    # API 失败时从 HTML 页面回退获取 tag
+    if [ -z "$tag" ]; then
+        echo "[回退] 从 GitHub 页面获取版本信息..."
+        local releases_page
+        releases_page=$(wget -q --timeout=15 --user-agent="$_GITHUB_UA" -O- "https://github.com/${owner}/${repo}/releases" 2>/dev/null)
+        tag=$(echo "$releases_page" | grep -o '/releases/tag/[^"]*' | head -1 | sed 's|/releases/tag/||')
+    fi
+
+    if [ -z "$tag" ]; then
+        echo "[错误] 无法获取版本信息（API 与页面均失败）"
+        return 1
+    fi
     echo "[版本] $tag"
 
-    local all_urls
-    all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
+    local all_urls=""
+    if [ -n "$release_json" ]; then
+        all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
+    fi
+
+    # API 取不到 URL 时从 expanded_assets 页面解析
+    if [ -z "$all_urls" ]; then
+        echo "[回退] 从 Release 页面解析下载链接..."
+        all_urls=$(_fetch_asset_urls_fallback "$owner" "$repo" "$tag")
+    fi
+
+    if [ -z "$all_urls" ]; then
+        echo "[错误] 无法获取下载链接"
+        return 1
+    fi
 
     # 解析 manifest 辅助定位（可选）
     local download_dir="${CACHE_DIR}/${plugin_name}"
