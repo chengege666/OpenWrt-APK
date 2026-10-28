@@ -39,7 +39,7 @@ show_install_plugin_menu() {
     echo -e "  17. OxiDNS (DNS解析)           18. Arcane (Docker面板)"
     echo -e "  19. Cloudflared (隧道)         20. Run (脚本执行器)"
     echo -e "  21. 高级卸载 (彻底卸载插件)    22. Momo (科学上网)"
-    echo -e "  23. Daede (dae/daed界面)        24. AdZero (广告过滤/DNS)"
+    echo -e "  23. Daede (dae/daed界面)    24. AdZero (广告过滤/DNS)"
     echo -e "  0.  返回上级"
     echo ""
 }
