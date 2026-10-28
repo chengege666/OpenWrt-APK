@@ -51,6 +51,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 [ -f "${SCRIPT_DIR}/plugins/luci-app-uninstall.sh" ] && . "${SCRIPT_DIR}/plugins/luci-app-uninstall.sh"
 [ -f "${SCRIPT_DIR}/plugins/momo.sh" ] && . "${SCRIPT_DIR}/plugins/momo.sh"
 [ -f "${SCRIPT_DIR}/plugins/daede.sh" ] && . "${SCRIPT_DIR}/plugins/daede.sh"
+[ -f "${SCRIPT_DIR}/plugins/adzero.sh" ] && . "${SCRIPT_DIR}/plugins/adzero.sh"
 
 
 TTY="/dev/tty"
@@ -220,6 +221,10 @@ install_plugin_menu() {
                 install_daede
                 wait_for_enter
                 ;;
+            24)
+                install_adzero
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -331,6 +336,10 @@ uninstall_menu() {
                 uninstall_daede
                 wait_for_enter
                 ;;
+            24)
+                uninstall_adzero
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -440,6 +449,10 @@ update_menu() {
                 ;;
             23)
                 update_daede
+                wait_for_enter
+                ;;
+            24)
+                update_adzero
                 wait_for_enter
                 ;;
             0)
