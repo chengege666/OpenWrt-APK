@@ -80,7 +80,7 @@ show_uninstall_menu() {
     echo -e "  17. 卸载 OxiDNS (DNS解析)          18. 卸载 Arcane (Docker面板)"
     echo -e "  19. 卸载 Cloudflared (隧道)        20. 卸载 Run (脚本执行器)"
     echo -e "  21. 卸载 高级卸载 (彻底卸载插件)   22. 卸载 Momo (科学上网)"
-    echo -e "  23. 卸载 Daede (dae/daed界面)       24. 卸载 AdZero (广告过滤/DNS)"
+    echo -e "  23. 卸载 Daede (dae/daed界面)      24. 卸载 AdZero (广告过滤/DNS)"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -101,7 +101,7 @@ show_update_menu() {
     echo -e "  17. 更新 OxiDNS (DNS解析)          18. 更新 Arcane (Docker面板)"
     echo -e "  19. 更新 Cloudflared (隧道)        20. 更新 Run (脚本执行器)"
     echo -e "  21. 更新 高级卸载 (彻底卸载插件)   22. 更新 Momo (科学上网)"
-    echo -e "  23. 更新 Daede (dae/daed界面)       24. 更新 AdZero (广告过滤/DNS)"
+    echo -e "  23. 更新 Daede (dae/daed界面)      24. 更新 AdZero (广告过滤/DNS)"
     echo -e "  0.  返回上级"
     echo ""
 }
