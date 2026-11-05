@@ -53,6 +53,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 [ -f "${SCRIPT_DIR}/plugins/daede.sh" ] && . "${SCRIPT_DIR}/plugins/daede.sh"
 [ -f "${SCRIPT_DIR}/plugins/adzero.sh" ] && . "${SCRIPT_DIR}/plugins/adzero.sh"
 [ -f "${SCRIPT_DIR}/plugins/nailink.sh" ] && . "${SCRIPT_DIR}/plugins/nailink.sh"
+[ -f "${SCRIPT_DIR}/plugins/honk.sh" ] && . "${SCRIPT_DIR}/plugins/honk.sh"
 
 
 TTY="/dev/tty"
@@ -230,6 +231,10 @@ install_plugin_menu() {
                 install_nailink
                 wait_for_enter
                 ;;
+            26)
+                install_honk
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -349,6 +354,10 @@ uninstall_menu() {
                 uninstall_nailink
                 wait_for_enter
                 ;;
+            26)
+                uninstall_honk
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -466,6 +475,10 @@ update_menu() {
                 ;;
             25)
                 update_nailink
+                wait_for_enter
+                ;;
+            26)
+                update_honk
                 wait_for_enter
                 ;;
             0)
