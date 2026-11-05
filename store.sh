@@ -52,6 +52,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 [ -f "${SCRIPT_DIR}/plugins/momo.sh" ] && . "${SCRIPT_DIR}/plugins/momo.sh"
 [ -f "${SCRIPT_DIR}/plugins/daede.sh" ] && . "${SCRIPT_DIR}/plugins/daede.sh"
 [ -f "${SCRIPT_DIR}/plugins/adzero.sh" ] && . "${SCRIPT_DIR}/plugins/adzero.sh"
+[ -f "${SCRIPT_DIR}/plugins/nailink.sh" ] && . "${SCRIPT_DIR}/plugins/nailink.sh"
 
 
 TTY="/dev/tty"
@@ -225,6 +226,10 @@ install_plugin_menu() {
                 install_adzero
                 wait_for_enter
                 ;;
+            25)
+                install_nailink
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -340,6 +345,10 @@ uninstall_menu() {
                 uninstall_adzero
                 wait_for_enter
                 ;;
+            25)
+                uninstall_nailink
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -453,6 +462,10 @@ update_menu() {
                 ;;
             24)
                 update_adzero
+                wait_for_enter
+                ;;
+            25)
+                update_nailink
                 wait_for_enter
                 ;;
             0)
