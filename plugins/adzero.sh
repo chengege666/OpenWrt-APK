@@ -8,28 +8,64 @@ install_adzero() {
     echo "================================"
     echo ""
 
-    echo "[安装] 正在使用官方一键脚本进行安装..."
-    local tmp_script="/tmp/adzero-install.sh"
-    if curl -fL --proto '=https' --proto-redir '=https' \
-        https://raw.githubusercontent.com/slobys/AdZero/main/scripts/install.sh \
-        -o "$tmp_script" 2>/dev/null; then
-        if sh "$tmp_script"; then
-            rm -f "$tmp_script"
-            echo "[成功] AdZero 安装完成"
-            echo ""
-            echo "[提示] 安装后请打开 LuCI：服务 → AdZero"
-            echo "[提示] 页面未更新请按 Ctrl+F5 刷新"
-            show_success
-            return 0
-        else
-            rm -f "$tmp_script"
-            echo "[错误] 官方脚本执行失败"
-            return 1
-        fi
-    else
-        echo "[错误] 官方脚本下载失败，请检查网络"
+    local owner="slobys"
+    local repo="AdZero"
+    local plugin_name="adzero"
+
+    local release_json
+    release_json=$(get_latest_release "$owner" "$repo") || return 1
+
+    local tag
+    tag=$(get_release_tag "$release_json")
+    echo "[版本] $tag"
+
+    local all_urls
+    all_urls=$(get_download_urls "$release_json" "$owner" "$repo" "$tag")
+    if [ -z "$all_urls" ]; then
+        echo "[错误] 无法获取下载链接"
         return 1
     fi
+
+    # 发布页提供 noarch 通用 apk
+    local apk_url
+    apk_url=$(echo "$all_urls" | grep 'luci-app-adzero_.*_noarch\.apk$' | head -1)
+    if [ -z "$apk_url" ]; then
+        echo "[错误] 发布页未找到 luci-app-adzero noarch apk"
+        return 1
+    fi
+
+    local download_dir="${CACHE_DIR}/${plugin_name}"
+    rm -rf "$download_dir"
+    mkdir -p "$download_dir"
+
+    if ! download_file "$apk_url" "${download_dir}/luci-app-adzero.apk"; then
+        echo "[错误] 下载失败"
+        return 1
+    fi
+
+    echo "[安装] 正在安装..."
+    cd "$download_dir" || return 1
+    if apk add --allow-untrusted --force-overwrite --clean-protected *.apk 2>/dev/null; then
+        echo "[成功] APK 安装完成"
+    else
+        echo "[错误] APK 安装失败"
+        return 1
+    fi
+
+    echo "[修复] 修复依赖..."
+    fix_dependencies
+
+    echo "[清理] 清除 LuCI 缓存..."
+    rm -rf /tmp/luci-* 2>/dev/null
+
+    echo "[重启] 重启 LuCI..."
+    restart_luci
+
+    echo ""
+    echo "[提示] 安装后请打开 LuCI：服务 → AdZero"
+    echo "[提示] 页面未更新请按 Ctrl+F5 刷新"
+    show_success
+    return 0
 }
 
 uninstall_adzero() {
@@ -76,23 +112,6 @@ update_adzero() {
     echo "================================"
     echo ""
 
-    echo "[更新] 正在使用官方一键脚本进行升级..."
-    local tmp_script="/tmp/adzero-install.sh"
-    if curl -fL --proto '=https' --proto-redir '=https' \
-        https://raw.githubusercontent.com/slobys/AdZero/main/scripts/install.sh \
-        -o "$tmp_script" 2>/dev/null; then
-        if sh "$tmp_script" --upgrade; then
-            rm -f "$tmp_script"
-            echo "[成功] AdZero 更新完成"
-            show_success
-            return 0
-        else
-            rm -f "$tmp_script"
-            echo "[错误] 官方升级脚本执行失败"
-            return 1
-        fi
-    else
-        echo "[错误] 官方脚本下载失败，请检查网络"
-        return 1
-    fi
+    cleanup_old_cache
+    install_adzero
 }
