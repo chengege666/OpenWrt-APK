@@ -54,6 +54,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 [ -f "${SCRIPT_DIR}/plugins/adzero.sh" ] && . "${SCRIPT_DIR}/plugins/adzero.sh"
 [ -f "${SCRIPT_DIR}/plugins/nailink.sh" ] && . "${SCRIPT_DIR}/plugins/nailink.sh"
 [ -f "${SCRIPT_DIR}/plugins/honk.sh" ] && . "${SCRIPT_DIR}/plugins/honk.sh"
+[ -f "${SCRIPT_DIR}/plugins/watchcat.sh" ] && . "${SCRIPT_DIR}/plugins/watchcat.sh"
 
 
 TTY="/dev/tty"
@@ -235,6 +236,10 @@ install_plugin_menu() {
                 install_honk
                 wait_for_enter
                 ;;
+            27)
+                install_watchcat
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -358,6 +363,10 @@ uninstall_menu() {
                 uninstall_honk
                 wait_for_enter
                 ;;
+            27)
+                uninstall_watchcat
+                wait_for_enter
+                ;;
 
             0)
                 return
@@ -479,6 +488,10 @@ update_menu() {
                 ;;
             26)
                 update_honk
+                wait_for_enter
+                ;;
+            27)
+                update_watchcat
                 wait_for_enter
                 ;;
             0)

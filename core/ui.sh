@@ -41,6 +41,7 @@ show_install_plugin_menu() {
     echo -e "  21. 高级卸载 (彻底卸载插件)    22. Momo (科学上网)"
     echo -e "  23. Daede (dae/daed界面)       24. AdZero (广告过滤/DNS)"
     echo -e "  25. NaiLink (科学上网)         26. Honk (科学上网)"
+    echo -e "  27. WatchCat (断网守护)"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -83,6 +84,7 @@ show_uninstall_menu() {
     echo -e "  21. 卸载 高级卸载 (彻底卸载插件)   22. 卸载 Momo (科学上网)"
     echo -e "  23. 卸载 Daede (dae/daed界面)      24. 卸载 AdZero (广告过滤/DNS)"
     echo -e "  25. 卸载 NaiLink (科学上网)        26. 卸载 Honk (科学上网)"
+    echo -e "  27. 卸载 WatchCat (看门狗/重启守护)"
     echo -e "  0.  返回上级"
     echo ""
 }
@@ -105,6 +107,7 @@ show_update_menu() {
     echo -e "  21. 更新 高级卸载 (彻底卸载插件)   22. 更新 Momo (科学上网)"
     echo -e "  23. 更新 Daede (dae/daed界面)      24. 更新 AdZero (广告过滤/DNS)"
     echo -e "  25. 更新 NaiLink (科学上网)        26. 更新 Honk (科学上网)"
+    echo -e "  27. 更新 WatchCat (看门狗/重启守护)"
     echo -e "  0.  返回上级"
     echo ""
 }
